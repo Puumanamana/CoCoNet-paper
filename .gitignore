@@ -1,0 +1,7 @@
+work
+.nextflow*
+test*
+output*
+sherpa-results*
+archive
+reviewers.md
