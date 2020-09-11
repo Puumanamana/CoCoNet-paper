@@ -53,12 +53,22 @@ def metabat2_to_others(table, suffix):
 def main():
     args = parser()
 
+    ids = [x.strip().split()[0][1:] for x in open(args.fasta) if x.startswith('>')]
+
     if Path(args.abundance).suffix in {'.h5', '.hdf5'}:
         table = h5_to_metabat2(args.abundance)
     else:
         table =  pd.read_csv(args.abundance, sep='\t', index_col=0)
 
-    metabat2_to_others(table, args.suffix)
+    try:
+        table_ord = table.loc[ids]
+    except KeyError:
+        raise KeyError(
+            ('Some contigs are in the fasta file but not in the coverage. '
+             'This should never happen')
+        )
+        
+    metabat2_to_others(table_ord, args.suffix)
     
 if __name__ == '__main__':
     main()

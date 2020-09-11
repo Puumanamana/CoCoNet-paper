@@ -1,0 +1,14 @@
+name: nf-station-aloha
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pigz=2.4
+  - sra-tools=2.10.8
+  - entrez-direct=13.3-0
+  - fastp=0.20.1
+  - spades=3.14.1
+  - bwa=0.7.17
+  - samtools=1.10
+  - minimap2=2.17  

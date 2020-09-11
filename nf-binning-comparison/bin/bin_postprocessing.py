@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 
@@ -31,13 +32,13 @@ def merge_contigs(fasta, assignments):
 
     return contigs
 
-def write_bins_fa(contigs):
-    with open("merged.fasta", 'w') as handle:
+def write_bins_fa(contigs, output):
+    with open(output, 'w') as handle:
         for (bin_id, seq) in sorted(contigs.items(), key=lambda x: int(x[0])):
             handle.write(f'>bin_{bin_id}\n{seq}\n')
 
-def write_bins_csv(assignments):
-    with open('bins_with_singletons.csv', 'w') as handle:
+def write_bins_csv(assignments, output):
+    with open(output, 'w') as handle:
         for (ctg, bin_id) in assignments.items():
             handle.write(f'{ctg},{bin_id}\n')
 
@@ -47,10 +48,11 @@ def main():
 
     args = parse_args()
     assignments = {ctg: int(b) for (ctg, b) in map(lambda x: x.strip().split(','), open(args.bins))}
-    
+
+    prefix = Path(args.bins).stem
     merged = merge_contigs(args.fasta, assignments)
-    write_bins_fa(merged)
-    write_bins_csv(assignments)
+    write_bins_fa(merged, f'{prefix}-merged.fasta')
+    write_bins_csv(assignments, f'{prefix}-complete.csv')
 
 if __name__ == '__main__':
     main()

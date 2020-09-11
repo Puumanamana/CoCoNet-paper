@@ -1,0 +1,11 @@
+FROM continuumio/miniconda3:latest
+LABEL author="carisdak@hawaii.edu"
+
+RUN apt-get update && apt-get install -y git
+
+RUN conda install -c bioconda perl>=5 mummer=3.23
+
+RUN git clone https://bitbucket.org/MAVERICLab/stampede-clustergenomes.git \
+    && mv stampede-clustergenomes /opt
+
+ENV PATH /opt/stampede-clustergenomes/bin:$PATH

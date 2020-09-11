@@ -5,14 +5,14 @@ process BAM_TO_ABD_TABLE{
     tuple val(meta), path(coverage)
 
     output:
-    tuple val(meta), path("coverage_${meta}.tsv")
+    tuple val(meta), path("coverage_*.tsv")
 
     script:
     """
     jgi_summarize_bam_contig_depths \\
          --minMapQual ${params.min_map_qual} \\
          --percentIdentity ${params.min_map_id} \\
-        -outputDepth coverage_${meta}.tsv 
+        -outputDepth coverage_${meta.id}.tsv 
     """
 }
 
@@ -21,7 +21,7 @@ process REFORMAT_COVERAGE {
     conda 'pandas numpy h5py biopython'
 
     input:
-    tuple val(meta), path(coverage)
+    tuple val(meta), path(fasta), path(coverage)
 
     output:
     tuple val(meta), path("coverage_metabat2*.tsv"), emit: metabat2
@@ -32,14 +32,15 @@ process REFORMAT_COVERAGE {
     """
     h5_to_summary_table.py \\
         --abundance $coverage \\
-        --suffix $meta
+        --fasta $fasta \\
+        --suffix $meta.id
     """    
 }
 
 
 process BINS_TO_FASTA {
     publishDir "${params.outdir}/merged_bins", mode: 'copy'
-    conda ''
+    conda 'biopython'
 
     input:
     tuple val(meta), path(bins), path(fasta)
@@ -51,7 +52,7 @@ process BINS_TO_FASTA {
     script:
     """
     bin_postprocessing.py \\
-        --fasta ${fasta} \\
-        --bins ${bins}
+        --fasta $fasta \\
+        --bins $bins
     """
 }
