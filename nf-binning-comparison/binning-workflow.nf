@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-include { REFORMAT_COVERAGE; BINS_TO_FASTA } from './util/process'
+include { REFORMAT_COVERAGE; BINS_TO_FASTA; COMPUTE_SCORES } from './util/process'
 include { COCONET_PREPROCESS } from './modules/binning/coconet/preprocess/process'
 include { COCONET_RUN } from './modules/binning/coconet/run/process' addParams(outdir: "$params.outdir/binning")
 include { CONCOCT } from './modules/binning/concoct/process' addParams(outdir: "$params.outdir/binning")
@@ -17,11 +17,12 @@ workflow binning {
     fasta = Channel.fromPath("${folder}/*.fasta").map{[ [id: ds], it]}
     bams = Channel.fromPath("${folder}/*.bam").collect().map{[ [id: ds], it]}
     h5 = Channel.fromPath("${folder}/*.{h5,hdf5}").map{[ [id: ds], it]}
+    truth = file("${folder}/truth.csv")
 
     preproc_args = ["--min-ctg-len", "$params.min_ctg_len",
                     "--min-mapping-quality", "$params.min_mapq",
                     "--min-aln-coverage", "$params.min_map_id",
-                    "--fl-range", "$params.fl_range"]
+                    "--tlen-range", "$params.fl_range"]
 
     coconet_args = preproc_args + ["--min-prevalence", "${params.coconet.min_prevalence}",
                                    "--theta", "${params.coconet.theta}",
@@ -37,12 +38,13 @@ workflow binning {
     )
     coverage = REFORMAT_COVERAGE(inputs.fasta.join(inputs.h5))
 
-    // binning
+    binning
     coconet_bins = COCONET_RUN(
         inputs.fasta.join(inputs.h5),
         [publish_dir: 'CoCoNet',
          args: coconet_args.join(' ')]
     ).bins
+    
     metabat2_bins = METABAT2(
         inputs.fasta.join(coverage.metabat2),
         [publish_dir: 'Metabat2',
@@ -59,9 +61,18 @@ workflow binning {
          args: "-min_contig_length ${params.min_ctg_len}"]
     ).bins
 
+    all_bins = coconet_bins.mix(metabat2_bins, concoct_bins, maxbin2_bins)
+
+    // compute scores
+    COMPUTE_SCORES(
+        ds,
+        all_bins.collect{it[1]},
+        truth
+    )
+
     // reformating
     BINS_TO_FASTA(
-        coconet_bins.mix(metabat2_bins, concoct_bins, maxbin2_bins).combine(fasta, by: 0)
+        coconet_bins.mix(all_bins).combine(fasta, by: 0)
     )
 }
 

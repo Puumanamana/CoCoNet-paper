@@ -56,3 +56,25 @@ process BINS_TO_FASTA {
         --bins $bins
     """
 }
+
+
+process COMPUTE_SCORES {
+    publishDir "${params.outdir}/scores", mode: 'copy'
+    conda 'scikit-learn pandas'
+
+    input:
+    val(ds)
+    path(bins)
+    path truth
+
+    output:
+    tuple val(ds), path("*.csv")
+
+    script:
+    truth_args = truth.isFile() ? "" : "--truth ${truth}"
+    """
+    compute_metrics.py $truth_args \\
+        --bins ${bins.join(' ')} \\
+        --output scores-${ds}.csv
+    """
+}

@@ -1,14 +1,20 @@
+import os
 from pathlib import Path
+
 from sklearn.metrics import adjusted_rand_score
 import pandas as pd
+
 import sherpa
 
 from coconet import coconet, parser
-from coconet.core import config
+from coconet.core.config import Configuration
+from coconet.log import setup_logger
+
 
 def coconet_init(args):
-    cfg = config.Configuration()
-    cfg.init_config(mkdir=True, **vars(args))
+    setup_logger('CoCoNet', Path(args.output, 'CoCoNet.log'), args.loglvl)
+    cfg = Configuration()
+    cfg.init_config(**vars(args))
     cfg.to_yaml()
 
     coconet.preprocess(cfg)
@@ -20,7 +26,7 @@ def coconet_init(args):
 def compute_score(bins_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
     assignments['truth'] = pd.factorize(assignments.contig.str.rpartition('|')[0])[0]
-    
+
     return adjusted_rand_score(assignments.truth, assignments.pred)
 
 def compute_SA_score(bins_file, truth_file):
@@ -36,9 +42,13 @@ def main():
     '''
 
     args = parser.parse_args()
-
-    name = Path(args.fasta).parent.stem
+    
+    os.environ['COCONET_CONTINUE'] = 'Y'
     config = coconet_init(args)
+    os.environ['COCONET_CONTINUE'] = 'N'
+
+    sherpa_outdir = Path(args.output, 'sherpa')
+    sherpa_outdir.mkdir(exist_ok=True)
 
     parameters = [
         sherpa.Continuous('theta', [0.01, 0.99]),
@@ -46,6 +56,9 @@ def main():
         sherpa.Continuous('gamma2', [0.05, 1]), # gamma2 = gamma1 + delta_g
         sherpa.Discrete('max_neighbors', [1, 500])
     ]
+    if args.vote_threshold is not None:
+        parameters.append(sherpa.Continuous('vote_threshold', [0.01, 0.99]))
+    
     algorithm = sherpa.algorithms.GPyOpt()
 
     study = sherpa.Study(parameters=parameters,
@@ -55,19 +68,14 @@ def main():
     for i, trial in enumerate(study):
         # Update hyperparameters
         print(f"\nIteration #{i}")
-        config.gamma1 = trial.parameters['gamma1']
-        config.gamma2 = trial.parameters['gamma2']
-        config.theta = trial.parameters['theta']
-        config.max_neighbors = trial.parameters['max_neighbors']        
-        print(f'''
-        gamma1={config.gamma1:.4f}, 
-        gamma2={config.gamma2:.4f}, 
-        theta={config.theta:.4f}, 
-        max_neighbors={config.max_neighbors}
-        ''')
+
+        for param in (['gamma1', 'gamma2', 'theta', 'max_neighbors'] +
+                      ['vote_threshold']*(args.vote_threshold is not None)):
+            setattr(config, param, trial.parameters[param])
+            print(f'{param}={getattr(config, param):.1g}')
 
         # Run the algorithm
-        coconet.cluster(config, force=True)
+        coconet.cluster(config)
 
         # Compute the score
         if 'station_aloha' in str(args.fasta).lower():
@@ -80,7 +88,8 @@ def main():
         # Add to study
         study.add_observation(trial=trial, objective=validation_error)
         study.finalize(trial)
-        study.save(f'sherpa-results-{name}')
+        study.save(f'{str(sherpa_outdir)}')
+
         
 if __name__ == '__main__':
     main()

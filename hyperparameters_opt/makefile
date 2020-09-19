@@ -1,21 +1,17 @@
-opt:
-	mkdir -p sherpa-results-$(FOLDER)
-	python main.py \
+OUTDIR ?= "test-$(FOLDER)"
+ARGS ?= 
+
+sim:
+	python main.py run $(ARGS) \
+	    --threads 1 \
 		--fasta $(FOLDER)/assembly.fasta \
 		--h5 $(FOLDER)/coverage_contigs_gt2048.h5 \
-		--output test-$(FOLDER)
+		--output $(OUTDIR)
 
 aloha:
-	mkdir -p sherpa-results-$(FOLDER)
-	python main.py \
+	python main.py run $(ARGS) \
+	    --threads 1 \
 		--fasta $(FOLDER)/assembly.fasta \
 		--bam $(FOLDER)/*.bam \
-		--output test-$(FOLDER) \
-		--fl-range 200 500
-
-aloha_old:
-	mkdir -p sherpa-results-$(FOLDER)
-	python old.py \
-		--fasta $(FOLDER)/assembly.fasta \
-		--coverage $(FOLDER)/*.bam \
-		--output test-$(FOLDER)
+		--output $(OUTDIR) \
+		--tlen-range 200 500
