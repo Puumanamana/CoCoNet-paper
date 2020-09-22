@@ -1,6 +1,6 @@
 work
 .nextflow*
-test*
+test-*
 output*
 sherpa-results*
 archive
