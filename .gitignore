@@ -12,3 +12,5 @@ Station_Aloha
 *.png
 *.bak
 results*
+input-data
+Station-Aloha*
