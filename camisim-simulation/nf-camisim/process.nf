@@ -141,6 +141,7 @@ process TO_H5 {
 
     input:
     tuple val(meta), path(depth), path(sim_info)
+    path genome_sizes
 
     output:
     path("coverage_virus.h5")
@@ -148,6 +149,6 @@ process TO_H5 {
 
     script:
     """
-    depth_to_h5.py --metadata $sim_info --n-samples $meta.n_samples
+    depth_to_h5.py --metadata $sim_info --genome-sizes $genome_sizes --n-samples $meta.n_samples
     """
 }

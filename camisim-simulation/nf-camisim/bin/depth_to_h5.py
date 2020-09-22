@@ -11,6 +11,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--metadata', type=str)
+    parser.add_argument('--genome-sizes', type=str)    
     parser.add_argument('--n-samples', type=int)    
     args = parser.parse_args()
 
@@ -23,7 +24,8 @@ def main():
     metadata = pd.read_csv(args.metadata)
 
     info = metadata.groupby("V_id").agg(list)
-    sizes = metadata.groupby("V_id")['size'].first()
+    sizes = pd.read_csv(args.genome_sizes, header=None, index_col=0,
+                        names=['genome', 'size'])['size']
 
     cov_vir_h5 = h5py.File("coverage_virus.h5","w")
     cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")
@@ -35,7 +37,7 @@ def main():
             continue
 
         coverage = pd.read_csv(
-            filename, sep='\\t', header=None,
+            filename, sep='\t', header=None,
             usecols=range(1, args.n_samples+2), dtype=int
         ).set_index(1)
         coverage.index -= 1 # since samtools positions are 1-based
@@ -47,7 +49,7 @@ def main():
 
         cov_vir_h5.create_dataset(virus, data=coverage)
 
-        for ctg, start, end in zip(*info.loc[virus,["C_id","start","end"]]):
+        for ctg, start, end in zip(*info.loc[virus, ["C_id", "start", "end"]]):
             cov_ctg_h5.create_dataset(ctg, data=coverage[:,start:end+1])
 
     cov_ctg_h5.close()

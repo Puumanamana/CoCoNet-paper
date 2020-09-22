@@ -22,6 +22,11 @@ workflow camisim {
     main:
     db = DOWNLOAD_VIRAL_REFSEQ()
     tax_db = DOWNLOAD_TAXONOMY()
+
+    genome_sizes = db
+        .splitFasta( record: [id: true, seqString: true ])
+        .map{ "$it.id,$it.seqString.length()" )
+        .collectFile('genome_sizes.csv')
     
     configs = GENERATE_CONFIG(
         db,
@@ -50,7 +55,8 @@ workflow camisim {
     TO_H5(
         coverage_txt
             .groupTuple(by: 0)
-            .combine(sim_info.table, by: 0)
+            .combine(sim_info.table, by: 0),
+        genome_sizes
     )        
 }
  
