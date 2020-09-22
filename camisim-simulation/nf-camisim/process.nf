@@ -93,7 +93,7 @@ process CAMISIM {
     """
 }
 
-process GENERATE_METADATA {
+process PROCESS_CAMISIM_OUTPUT {
     tag "$meta.id"
     publishDir "$params.outdir/$meta.id", mode: "copy"
 
@@ -109,34 +109,7 @@ process GENERATE_METADATA {
 
     script:
     """
-    #!/usr/bin/env python
-
-    import pandas as pd
-    import re
-
-    pattern = re.compile(r'>(.*)_from_([0-9]+)_to_([0-9]+)_total_([0-9]+)')
-    ctg_info = []
-    for line in open("$fasta"):
-        if line.startswith('>'):
-            (name, start, end, size) = re.findall(pattern, line)[0]
-            ctg_info.append([name, int(start), int(end), int(size)])
-
-    ctg_info = pd.DataFrame(ctg_info, columns=['V_id', 'start', 'end', 'size'])
-
-    suffixes = ctg_info.groupby('V_id').cumcount().astype(str)
-    ctg_info['C_id'] = ctg_info.V_id + '|' + suffixes
-
-    ctg_info.to_csv('metadata.csv', index=False)
-
-    i = 0
-    writer = open('assembly.fasta', 'w')
-    for line in open("$fasta"):
-         if not line.startswith('>'):
-             writer.write(line)
-         else:
-             writer.write(ctg_info.C_id[i]+'\n')
-             i += 1
-    writer.close()
+    process_camisim_output.py $fasta
     """
 }
 
@@ -162,7 +135,7 @@ process SAMTOOLS_DEPTH {
 process TO_H5 {
     tag {"$meta.id"}
     publishDir "$params.outdir/$meta.id", mode: "copy"
-    
+
     label 'medium_computation'
     container 'nakor/coconet-paper-python'
 
@@ -175,43 +148,6 @@ process TO_H5 {
 
     script:
     """
-    #!/usr/bin/env python
-
-    from pathlib import Path
-    import pandas as pd
-    import h5py
-
-    metadata = pd.read_csv("$sim_info")
-
-    info = metadata.groupby("V_id").agg(list)
-    sizes = metadata.groupby("V_id")['size'].first()
-
-    cov_vir_h5 = h5py.File("coverage_virus.h5","w")
-    cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")
-
-    for filename in Path('.').glob('*.txt'):
-        virus = filename.stem
-
-        if virus not in info.index:
-            continue
-
-        coverage = pd.read_csv(
-            filename, sep='\\t', header=None,
-            usecols=range(1, ${meta.n_samples+2}), dtype=int
-        ).set_index(1)
-        coverage.index -= 1 # since samtools positions are 1-based
-        coverage.columns = [f'sample_{i+1}' for i in range($meta.n_samples)]
-        coverage = (coverage
-            .reindex(index=range(sizes.loc[virus]))
-            .fillna(0)
-            .to_numpy())
-
-        cov_vir_h5.create_dataset(virus, data=coverage)
-
-        for ctg, start, end in zip(*info.loc[virus,["C_id","start","end"]]):
-            cov_ctg_h5.create_dataset(ctg, data=coverage[:,start:end+1])
-
-    cov_ctg_h5.close()
-    cov_vir_h5.close()
+    depth_to_h5.py --metadata $sim_info
     """
 }

@@ -4,7 +4,7 @@ nextflow.enable.dsl = 2
 
 include {DOWNLOAD_VIRAL_REFSEQ; DOWNLOAD_TAXONOMY;
          GENERATE_CONFIG ; CAMISIM ;
-         GENERATE_METADATA;
+         PROCESS_CAMISIM_OUTPUT ;
          SAMTOOLS_DEPTH; TO_H5} from './process'
 
 workflow camisim {
