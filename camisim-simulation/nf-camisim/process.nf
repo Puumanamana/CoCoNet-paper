@@ -4,6 +4,7 @@ process GENERATE_CONFIG {
     conda 'pandas biopython configparser'
 
     input:
+    path db
     each xcoverage
     each n_samples
     each n_genomes
@@ -22,6 +23,7 @@ process GENERATE_CONFIG {
     ]
     """
     generate_camisim_metadata.py \
+        --db $db
         --name $meta.id
         --cov_lvl $xcoverage \
         --n_samples $n_samples \
@@ -42,8 +44,8 @@ process CAMISIM {
     path contig_db
 
     output:
-    set val(meta), file("camisim_*/gsa_pooled.fasta"), emit: assembly
-    set val(meta), file("camisim_*/*sample*/bam/*.bam"), emit: bam
+    tuple val(meta), file("camisim_*/gsa_pooled.fasta"), emit: assembly
+    tuple val(meta), file("camisim_*/*sample*/bam/*.bam"), emit: bam
 
     script:
     """
