@@ -5,15 +5,14 @@ RUN apt-get update && apt-get install -y procps git && apt-get clean -y
 
 COPY conda_env.yml /
 RUN conda env create -f /conda_env.yml && conda clean -a
-COPY diamond /opt/conda/envs/nf-station-aloha/bin
 
 #=================================================#
-#============ stampede-clustergenomes ============#
+#============== CAMISIM from GitHub ==============#
 #=================================================#
 
-RUN git clone https://bitbucket.org/MAVERICLab/stampede-clustergenomes.git \
-    && mv stampede-clustergenomes /opt
+RUN git clone https://github.com/CAMI-challenge/CAMISIM.git \
+    && mv CAMISIM /opt
 
 WORKDIR /workspace
 
-ENV PATH /opt/conda/envs/nf-station-aloha/bin:/opt/stampede-clustergenomes/bin:$PATH
+ENV PATH /opt/conda/envs/camisim/bin:/opt/CAMISIM:$PATH

@@ -1,0 +1,13 @@
+name: camisim
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python =2.7
+  - biopython
+  - biom-format
+  - numpy
+  - matplotlib
+  - perl =5
+  - perl-xml-simple

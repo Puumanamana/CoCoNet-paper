@@ -27,7 +27,7 @@ process DOWNLOAD_ILLUMINA_READS {
 
 
 process DOWNLOAD_ONT_ASSEMBLY {
-    publishDir "$params.outdir/ONT-assemblies/per-sample", mode: "copy"
+    publishDir "$params.outdir/ONT-assemblies", mode: "copy"
 
     input:
     val accession
@@ -39,7 +39,7 @@ process DOWNLOAD_ONT_ASSEMBLY {
     """
     esearch -db nuccore -query "$accession" \\
         | efetch -format fasta \\
-        > assembly_ONT.fasta
+        > assemblies_ONT-concat.fasta
     """
 }
 
@@ -136,16 +136,14 @@ process DEDUPLICATION_ONT {
     label "medium_computation"
 
     input:
-    path assemblies
+    path assembly
 
     output:
     path "*.fna"
 
     script:
     """
-    cat $assemblies > merged_assemblies.fasta
-    Cluster_genomes.pl -f merged_assemblies.fasta -c 80 -i 95
-    rm merged_assemblies.fasta
+    Cluster_genomes.pl -f $assembly -c 80 -i 95
     """
 }
 
