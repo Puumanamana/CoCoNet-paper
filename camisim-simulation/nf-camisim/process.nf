@@ -44,7 +44,7 @@ process GENERATE_CONFIG {
 
     script:
     meta = [
-        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}.${replicate}",
+        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}_${replicate}",
         coverage: xcoverage,
         n_samples: n_samples,
         n_genomes: n_genomes,
@@ -109,7 +109,7 @@ process PROCESS_CAMISIM_OUTPUT {
 
     script:
     """
-    process_camisim_output.py $fasta
+    process_camisim_output.py --fasta $fasta
     """
 }
 
@@ -148,6 +148,6 @@ process TO_H5 {
 
     script:
     """
-    depth_to_h5.py --metadata $sim_info
+    depth_to_h5.py --metadata $sim_info --n-samples $meta.n_samples
     """
 }

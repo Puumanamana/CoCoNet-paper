@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 from pathlib import Path
 
@@ -39,9 +41,9 @@ def main():
         coverage.index -= 1 # since samtools positions are 1-based
         coverage.columns = [f'sample_{i+1}' for i in range(args.n_samples)]
         coverage = (coverage
-            .reindex(index=range(sizes.loc[virus]))
-            .fillna(0)
-            .to_numpy())
+                    .reindex(index=range(sizes.loc[virus]))
+                    .fillna(0)
+                    .to_numpy().T)
 
         cov_vir_h5.create_dataset(virus, data=coverage)
 

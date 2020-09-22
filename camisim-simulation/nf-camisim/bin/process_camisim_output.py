@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import pandas as pd
 import re
@@ -19,7 +21,7 @@ def main():
     ctg_info = get_meta(args.fasta)
     rename_fasta(args.fasta, ctg_info)
 
-def get_meta(fasta, output='metadata'):
+def get_meta(fasta, output='metadata.csv'):
 
     pattern = re.compile(r'>(.*)_from_([0-9]+)_to_([0-9]+)_total_([0-9]+)')
     ctg_info = []
