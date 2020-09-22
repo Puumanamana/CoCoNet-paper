@@ -3,7 +3,7 @@
 import configparser
 import pandas as pd
 import argparse
-from Bio import SeqIO
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 
 
 def parse_args():
@@ -13,18 +13,20 @@ def parse_args():
     parser.add_argument('--n_samples', type=int)
     parser.add_argument('--n_genomes', type=int)
     parser.add_argument('--db', type=str)
+    parser.add_argument('--min-genome-size', type=int, default=3000)
     parser.add_argument('--cami-data', type=str, default='.')
     parser.add_argument('--log-mu', type=int, default=1)
     parser.add_argument('--log-sigma', type=int, default=2)
+    parser.add_argument('--threads', type=int, default=4)
     
     args = parser.parse_args()
     return args
 
 def main():
     args = parse_args()
-    
-    all_genomes = pd.Series({ seq.id: len(seq.seq) for seq in SeqIO.parse(args.db,'fasta') })
-    sub_genomes = all_genomes.sample(args.n_genomes)
+
+    genome_sizes = pd.Series(split_genomes(args.db, args.min_genome_size))
+    sub_genomes = genome_sizes.sample(args.n_genomes)
 
     generate_config(size=args.cov_lvl*sub_genomes.sum()/1e9,
                     n_samples=args.n_samples,
@@ -32,19 +34,35 @@ def main():
                     ds_name=args.name,
                     cami_data=args.cami_data,
                     log_mu=args.log_mu,
-                    log_sigma=args.log_sigma)
+                    log_sigma=args.log_sigma,
+                    threads=args.threads)
 
     generate_id_to_genome(sub_genomes.index)
     generate_metadata()
 
+def split_genomes(fasta, min_size=None, folder='source-genomes'):
+    sizes = {}
+    with open(fasta, 'r') as handle:
+        for (title, genome) in SimpleFastaParser(handle):
+            g_id = title.split()[0]
+            genome_clean = genome.replace('N', '')
+            
+            if len(genome_clean) < min_size:
+                continue
+            
+            with open(f'{folder}/{g_id}.fasta', 'w') as writer:
+                writer.write(f'>{g_id}\n{genome_clean}\n')
+                sizes[g_id] = len(genome_clean)
+    return sizes
+
 def generate_config(ds_name=None, cami_data='.', project_path='.',
                     size=1, n_samples=5, n_genomes=6000,
-                    log_mu=1, log_sigma=2):
+                    log_mu=1, log_sigma=2, threads=1):
     config = configparser.ConfigParser()
     config['Main'] = {
         'seed': 42,
         'phase': 0,
-        'max_processors': 50,
+        'max_processors': threads,
         'dataset_id': ds_name,
         'output_directory': ds_name,
         'temp_directory': '/tmp/',
@@ -82,7 +100,7 @@ def generate_config(ds_name=None, cami_data='.', project_path='.',
         config.write(configfile)
 
 def generate_id_to_genome(genomes,out_dir="."):
-    mapping = pd.Series({f.split(".")[0]: f"contigs_fasta/{f}.fasta" for f in genomes})
+    mapping = pd.Series({f.split(".")[0]: f"source-genomes/{f}.fasta" for f in genomes})
     mapping.to_csv(f"{out_dir}/id_to_genome.tsv", sep="\t", header=False)
 
 def generate_metadata(out_dir="."):

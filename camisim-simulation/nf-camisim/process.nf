@@ -1,3 +1,24 @@
+process DOWNLOAD_TAXONOMY {
+    output:
+    file('*.tar.gz')
+
+    script:
+    """
+    wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
+    """
+}
+
+process DOWNLOAD_VIRAL_REFSEQ {
+    output:
+    file('*.fna')
+
+    script:
+    """
+    wget https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.{1,2}.1.genomic.fna.gz
+    zcat *.fna.gz | sed '/^>/! s/N//g' > viral_refseq.fna
+    """
+}
+
 process GENERATE_CONFIG {
     tag "$meta.id"
 
@@ -26,6 +47,7 @@ process GENERATE_CONFIG {
     """
     generate_camisim_metadata.py \\
         --db $db \\
+        --min-genome-size $params.min_genome_size \\
         --name $meta.id \\
         --cov_lvl $xcoverage \\
         --n_samples $n_samples \\

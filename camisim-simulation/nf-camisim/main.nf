@@ -4,15 +4,23 @@ nextflow.enable.dsl = 2
 
 include {GENERATE_CONFIG ; CAMISIM ; GENERATE_METADATA; SAMTOOLS_DEPTH; TO_H5} from './process'
 
-workflow {
-    db = file(params.db, checkIfExists: true)
+workflow camisim {
+    take:
+    xcov_lvls
+    nb_samples
+    nb_genomes
+    nb_replicates
+
+    main:
+    db = DOWNLOAD_VIRAL_REFSEQ()
+    tax_db = DOWNLOAD_TAXONOMY()
     
     configs = GENERATE_CONFIG(
         db,
-        Channel.from(4, 10), // coverage
-        Channel.from(5, 20), // number of samples
-        Channel.from(500, 2000), // number of genomes
-        Channel.from(0..10) // number of replicates
+        Channel.from(xcov_lvls), // coverage
+        Channel.from(nb_samples), // number of samples
+        Channel.from(nb_genomes), // number of genomes
+        Channel.from(0..nb_replicates) // number of replicates
     )
 
     simulation = CAMISIM(
@@ -36,7 +44,23 @@ workflow {
             .groupTuple(by: 0)
             .collect{it[1][1]}
             .combine(sim_info.table, by: 0)
+    )    
+}
+ 
+workflow all {
+    camisim(
+        [4, 10],
+        [5, 20],
+        [500, 2000],
+        10
     )
-    
 }
 
+workflow test {
+    camisim(
+        [1],
+        [2, 3],
+        [5],
+        2
+    )
+}
