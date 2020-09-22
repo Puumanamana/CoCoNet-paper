@@ -134,7 +134,7 @@ process GENERATE_METADATA {
          if not line.startswith('>'):
              writer.write(line)
          else:
-             writer.write(ctg_info.C_id[i])
+             writer.write(ctg_info.C_id[i]+'\n')
              i += 1
     writer.close()
     """
@@ -184,6 +184,7 @@ process TO_H5 {
     metadata = pd.read_csv("$sim_info")
 
     info = metadata.groupby("V_id").agg(list)
+    sizes = metadata.groupby("V_id")['size'].first()
 
     cov_vir_h5 = h5py.File("coverage_virus.h5","w")
     cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")
@@ -194,19 +195,21 @@ process TO_H5 {
         if virus not in info.index:
             continue
 
-        coverage = (
-            pd.read_csv(filename, usecols=lambda x: x!=0, dtype=int, index_col=0)
-            .set_axis(coverage.index - 1, axis=0) # since samtools positions are 1-based
-            .set_axis([f'sample_{i+1}' for i in range($meta.n_samples)], axis=1)
-            .reindex(index=range(metadata.loc[virus, 'size']))
+        coverage = pd.read_csv(
+            filename, sep='\\t', header=None,
+            usecols=range(1, ${meta.n_samples+2}), dtype=int
+        ).set_index(1)
+        coverage.index -= 1 # since samtools positions are 1-based
+        coverage.columns = [f'sample_{i+1}' for i in range($meta.n_samples)]
+        coverage = (coverage
+            .reindex(index=range(sizes.loc[virus]))
             .fillna(0)
-            .to_numpy()
-        )
+            .to_numpy())
 
         cov_vir_h5.create_dataset(virus, data=coverage)
 
         for ctg, start, end in zip(*info.loc[virus,["C_id","start","end"]]):
-            cov_ctg_h5.create_dataset(ctg, data=matrix[:,start:end+1])
+            cov_ctg_h5.create_dataset(ctg, data=coverage[:,start:end+1])
 
     cov_ctg_h5.close()
     cov_vir_h5.close()

@@ -26,7 +26,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    genome_sizes = pd.Series(split_genomes(args.db, args.min_genome_size))
+    genome_sizes = pd.Series(split_and_clean_genomes(args.db, args.min_genome_size))
     sub_genomes = genome_sizes.sample(args.n_genomes)
 
     generate_config(size=args.cov_lvl*sub_genomes.sum()/1e9,
@@ -41,21 +41,20 @@ def main():
     generate_id_to_genome(sub_genomes.index)
     generate_metadata()
 
-def split_genomes(fasta, min_size=None, folder='source-genomes'):
+def split_and_clean_genomes(fasta, min_size=None, folder='source-genomes'):
     sizes = {}
     Path(folder).mkdir()
     
     with open(fasta, 'r') as handle:
-        for (title, genome) in SimpleFastaParser(handle):
-            g_id = title.split()[0]
+        for i, (title, genome) in enumerate(SimpleFastaParser(handle)):
             genome_clean = genome.replace('N', '')
             
             if len(genome_clean) < min_size:
                 continue
             
-            with open(f'{folder}/{g_id}.fasta', 'w') as writer:
-                writer.write(f'>{g_id}\n{genome_clean}\n')
-                sizes[g_id] = len(genome_clean)
+            with open(f'{folder}/V{i}.fasta', 'w') as writer:
+                writer.write(f'>V{i}\n{genome_clean}\n')
+                sizes[f'V{i}'] = len(genome_clean)
     return sizes
 
 def generate_config(ds_name=None, cami_data='.', project_path='.',
