@@ -1,7 +1,9 @@
 process GENERATE_CONFIG {
     tag "$meta.id"
+
+    conda (params.conda ? "pandas biopython configparser" : null)
+    container 'nakor/coconet-paper-python'
     label 'low_computation'
-    conda 'pandas biopython configparser'
 
     input:
     path db
@@ -11,33 +13,35 @@ process GENERATE_CONFIG {
     each replicate
 
     output:
-    tuple val(sim_params), file('*.{ini,tsv}')
+    tuple val(meta), file('*.{ini,tsv}')
 
     script:
     meta = [
-        id: "camisim_lmu.${params.log_mu}-lsig.${params.log_sigma}-ns.${n_samples}-cov.${xcoverage}X-ng.${n_genomes}-r.${replicate}",
+        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}.r-${replicate}",
         coverage: xcoverage,
         n_samples: n_samples,
         n_genomes: n_genomes,
         replicate: replicate,
     ]
     """
-    generate_camisim_metadata.py \
-        --db $db
-        --name $meta.id
-        --cov_lvl $xcoverage \
-        --n_samples $n_samples \
-        --n_contigs $n_genomes \
-        --cami-data $params.cami_data \
-        --log-mu 1 \
+    generate_camisim_metadata.py \\
+        --db $db \\
+        --name $meta.id \\
+        --cov_lvl $xcoverage \\
+        --n_samples $n_samples \\
+        --n_genomes $n_genomes \\
+        --cami-data $params.cami_data \\
+        --log-mu 1 \\
         --log-sigma 2
     """
 }
 
 process CAMISIM {
     tag "$meta.id"
-    label 'high_computation'
+    publishDir "$params.outdir/$meta.id/bam"
+
     container 'nakor/coconet-paper-camisim'
+    label 'high_computation'
 
     input:
     tuple val(meta), path(config_files)
@@ -54,15 +58,18 @@ process CAMISIM {
 }
 
 process GENERATE_METADATA {
-    publishDir "${params.outdir}/${id}", mode: "copy"
-    label 'low_computation'
+    tag "$meta.id"
+    publishDir "$params.outdir/$meta.id", mode: "copy"
+
+    container 'nakor/coconet-paper-python'
     conda 'pandas'
+    label 'low_computation'
 
     input:
-    tuple val(id), path(fasta)
+    tuple val(meta), path(fasta)
 
     output:
-    tuple val(id), path('metadata.csv')
+    tuple val(meta), path('metadata.csv')
     path 'assembly.fasta'
 
     script:
@@ -95,9 +102,12 @@ process GENERATE_METADATA {
 }
 
 process SAMTOOLS_DEPTH {
-    label 'medium_computation'
     tag "${meta.id}_${genome}"
-    conda 'samtools'
+    publishDir "$outdir/$meta.id/txt"
+
+    conda (params.conda ? "samtools" : null)
+    container 'quay.io/biocontainers/samtools:1.10--h2e538c0_3'
+    label 'low_computation'
 
     input:
     tuple val(meta), val(genome), path(bams)
@@ -113,12 +123,14 @@ process SAMTOOLS_DEPTH {
 
 process TO_H5 {
     tag {"$meta.id"}
-    publishDir "${params.outdir}/${id}", mode: "copy"
+    publishDir "$params.outdir/$meta.id", mode: "copy"
+    
     label 'medium_computation'
-    conda 'pandas h5py'
+    conda (params.conda ? "pandas h5py" : null)
+    container 'nakor/coconet-paper-python'
 
     input:
-    tuple val(meta), file(depth), file(meta_file)
+    tuple val(meta), file(depth), file(sim_info)
 
     output:
     file("coverage_virus.h5")
@@ -132,7 +144,7 @@ process TO_H5 {
     import pandas as pd
     import h5py
 
-    metadata = pd.read_csv("${meta_file}")
+    metadata = pd.read_csv("$sim_info")
 
     info = metadata.groupby("V_id").agg(list)
 

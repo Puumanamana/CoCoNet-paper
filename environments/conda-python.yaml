@@ -1,0 +1,12 @@
+name: default
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python >=3.6
+  - biopython
+  - numpy
+  - pandas >=1
+  - h5py
+  - configparser

@@ -20,7 +20,7 @@ workflow {
         db
     )
     
-    GENERATE_METADATA(
+    sim_info = GENERATE_METADATA(
         simulation.assembly
     )
 
@@ -32,7 +32,10 @@ workflow {
     )
 
     TO_H5(
-        coverage_txt.groupTuple(by: 0).collect{it[1][1]}
+        coverage_txt
+            .groupTuple(by: 0)
+            .collect{it[1][1]}
+            .combine(sim_info, by: 0)
     )
     
 }

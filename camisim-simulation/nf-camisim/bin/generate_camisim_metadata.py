@@ -32,7 +32,7 @@ def main():
                     ds_name=args.name,
                     cami_data=args.cami_data,
                     log_mu=args.log_mu,
-                    log_signma=args.log_sigma)
+                    log_sigma=args.log_sigma)
 
     generate_id_to_genome(sub_genomes.index)
     generate_metadata()
