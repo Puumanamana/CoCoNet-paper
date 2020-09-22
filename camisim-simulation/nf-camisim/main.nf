@@ -2,14 +2,14 @@
 
 nextflow.enable.dsl = 2
 
-include {GENERATE_CONFIG ; CAMISIM ; GENERATE_METADATA; SAMTOOLS_DEPTH; TO_H5} from process
+include {GENERATE_CONFIG ; CAMISIM ; GENERATE_METADATA; SAMTOOLS_DEPTH; TO_H5} from './process'
 
 workflow {
     configs = GENERATE_CONFIG(
-        (4, 10), // coverage
-        (5, 20), // number of samples
-        (500, 2000), // number of genomes
-        (0..10) // number of replicates
+        Channel.from(4, 10), // coverage
+        Channel.from(5, 20), // number of samples
+        Channel.from(500, 2000), // number of genomes
+        Channel.from(0..10) // number of replicates
     )
 
     simulation = CAMISIM(

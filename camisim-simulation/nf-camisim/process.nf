@@ -2,16 +2,16 @@ process GENERATE_CONFIG {
     tag "$meta.id"
     label 'low_computation'
     conda 'pandas biopython configparser'
-	
+
     input:
     each xcoverage
     each n_samples
     each n_genomes
-	each replicate
+    each replicate
 
     output:
     tuple val(sim_params), file('*.{ini,tsv}')
-    
+
     script:
     meta = [
         id: "camisim_lmu.${params.log_mu}-lsig.${params.log_sigma}-ns.${n_samples}-cov.${xcoverage}X-ng.${n_genomes}-r.${replicate}",
@@ -36,16 +36,16 @@ process CAMISIM {
     tag "$meta.id"
     label 'high_computation'
     container 'nakor/coconet-paper-camisim'
-    
+
     input:
     tuple val(meta), path(config_files)
     path contig_db
-    
+
     output:
     set val(meta), file("camisim_*/gsa_pooled.fasta"), emit: assembly
     set val(meta), file("camisim_*/*sample*/bam/*.bam"), emit: bam
 
-	script:
+    script:
     """
     metagenomesimulation.py -s0 -p $task.cpus config.ini
     """
@@ -56,14 +56,14 @@ process GENERATE_METADATA {
     label 'low_computation'
     conda 'pandas'
 
-	input:
+    input:
     tuple val(id), path(fasta)
 
-	output:
+    output:
     tuple val(id), path('metadata.csv')
     path 'assembly.fasta'
 
-	script:
+    script:
     """
     import pandas as pd
 
@@ -97,10 +97,10 @@ process SAMTOOLS_DEPTH {
     tag "${meta.id}_${genome}"
     conda 'samtools'
 
-	input:
+    input:
     tuple val(meta), val(genome), path(bams)
 
-	output:
+    output:
     tuple val(meta), val(genome), path("*.txt")
 
     script:
@@ -114,7 +114,7 @@ process TO_H5 {
     publishDir "${params.outdir}/${id}", mode: "copy"
     label 'medium_computation'
     conda 'pandas h5py'
-	
+
     input:
     tuple val(meta), file(depth), file(meta_file)
 
@@ -122,7 +122,7 @@ process TO_H5 {
     file("coverage_virus.h5")
     file("coverage_contigs.h5")
 
-	script:
+    script:
     """
     #!/usr/bin/env python
 
@@ -136,10 +136,10 @@ process TO_H5 {
 
     cov_vir_h5 = h5py.File("coverage_virus.h5","w")
     cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")
-    
+
     for filename in Path('.').glob('*.txt'):
         virus = filename.stem
-    
+
         if virus not in info.index:
             continue
 
@@ -161,6 +161,3 @@ process TO_H5 {
     cov_vir_h5.close()
     """
 }
-
-
-
