@@ -1,16 +1,23 @@
 process DOWNLOAD_TAXONOMY {
+    label 'low_computation'
+    
     output:
-    file('*.tar.gz')
+    path '*.tar.gz'
 
     script:
     """
-    wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
+    mkdir NCBI
+    wget -qO- ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz \
+    | tar xz -C NCBI 
+    tar czf new_taxdump.tar.gz NCBI
     """
 }
 
 process DOWNLOAD_VIRAL_REFSEQ {
+    label 'low_computation'
+    
     output:
-    file('*.fna')
+    path '*.fna'
 
     script:
     """
@@ -22,7 +29,6 @@ process DOWNLOAD_VIRAL_REFSEQ {
 process GENERATE_CONFIG {
     tag "$meta.id"
 
-    conda (params.conda ? "pandas biopython configparser" : null)
     container 'nakor/coconet-paper-python'
     label 'low_computation'
 
@@ -34,11 +40,11 @@ process GENERATE_CONFIG {
     each replicate
 
     output:
-    tuple val(meta), file('*.{ini,tsv}')
+    tuple val(meta), path('*.{ini,tsv}'), path('source-genomes')
 
     script:
     meta = [
-        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}.r-${replicate}",
+        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}.${replicate}",
         coverage: xcoverage,
         n_samples: n_samples,
         n_genomes: n_genomes,
@@ -66,16 +72,24 @@ process CAMISIM {
     label 'high_computation'
 
     input:
-    tuple val(meta), path(config_files)
-    path contig_db
+    tuple val(meta), path(config_files), path(source_genomes)
+    path taxdump
 
     output:
-    tuple val(meta), file("camisim_*/gsa_pooled.fasta"), emit: assembly
-    tuple val(meta), file("camisim_*/*sample*/bam/*.bam"), emit: bam
+    tuple val(meta), path("camisim*/gsa_pooled.fasta"), emit: assembly
+    tuple val(meta), path("camisim*/*sample*/bam/*.bam"), emit: bam
 
     script:
     """
+    #!/usr/bin/env bash
+
     metagenomesimulation.py -s0 -p $task.cpus config.ini
+
+    # Rename bam files
+    for bam in `ls camisim*/*sample*/bam/*.bam` ; do
+        [[ "\$bam" =~ sample_[0-9]* ]] && sample_nb=\$BASH_REMATCH || echo "no sample id found" ||  exit 1
+        mv \$bam \${bam%.*}-\${sample_nb}.bam
+    done
     """
 }
 
@@ -84,7 +98,6 @@ process GENERATE_METADATA {
     publishDir "$params.outdir/$meta.id", mode: "copy"
 
     container 'nakor/coconet-paper-python'
-    conda 'pandas'
     label 'low_computation'
 
     input:
@@ -96,24 +109,28 @@ process GENERATE_METADATA {
 
     script:
     """
-    import pandas as pd
+    #!/usr/bin/env python
 
+    import pandas as pd
+    import re
+
+    pattern = re.compile(r'>(.*)_from_([0-9]+)_to_([0-9]+)_total_([0-9]+)')
     ctg_info = []
     for line in open("$fasta"):
         if line.startswith('>'):
-            (name, start, end, size) = [x[i] for x in line.strip().split('_') for i in range(0, 7, 2)]
-            ctg_info.append([name, start, end, size]
+            (name, start, end, size) = re.findall(pattern, line)[0]
+            ctg_info.append([name, int(start), int(end), int(size)])
 
     ctg_info = pd.DataFrame(ctg_info, columns=['V_id', 'start', 'end', 'size'])
 
     suffixes = ctg_info.groupby('V_id').cumcount().astype(str)
     ctg_info['C_id'] = ctg_info.V_id + '|' + suffixes
 
-    ctg_info.astype(int).to_csv('metadata.csv', index=False)
+    ctg_info.to_csv('metadata.csv', index=False)
 
     i = 0
     writer = open('assembly.fasta', 'w')
-    for line in open(assembly_file):
+    for line in open("$fasta"):
          if not line.startswith('>'):
              writer.write(line)
          else:
@@ -125,9 +142,8 @@ process GENERATE_METADATA {
 
 process SAMTOOLS_DEPTH {
     tag "${meta.id}_${genome}"
-    publishDir "$outdir/$meta.id/txt"
+    publishDir "$params.outdir/$meta.id/txt"
 
-    conda (params.conda ? "samtools" : null)
     container 'quay.io/biocontainers/samtools:1.10--h2e538c0_3'
     label 'low_computation'
 
@@ -139,7 +155,7 @@ process SAMTOOLS_DEPTH {
 
     script:
     """
-    samtools depth ${bams.join(' ')} > ${contig}.txt
+    samtools depth ${bams.join(' ')} > ${genome}.txt
     """
 }
 
@@ -148,15 +164,14 @@ process TO_H5 {
     publishDir "$params.outdir/$meta.id", mode: "copy"
     
     label 'medium_computation'
-    conda (params.conda ? "pandas h5py" : null)
     container 'nakor/coconet-paper-python'
 
     input:
-    tuple val(meta), file(depth), file(sim_info)
+    tuple val(meta), path(depth), path(sim_info)
 
     output:
-    file("coverage_virus.h5")
-    file("coverage_contigs.h5")
+    path("coverage_virus.h5")
+    path("coverage_contigs.h5")
 
     script:
     """

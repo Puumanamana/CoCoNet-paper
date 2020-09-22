@@ -2,7 +2,10 @@
 
 nextflow.enable.dsl = 2
 
-include {GENERATE_CONFIG ; CAMISIM ; GENERATE_METADATA; SAMTOOLS_DEPTH; TO_H5} from './process'
+include {DOWNLOAD_VIRAL_REFSEQ; DOWNLOAD_TAXONOMY;
+         GENERATE_CONFIG ; CAMISIM ;
+         GENERATE_METADATA;
+         SAMTOOLS_DEPTH; TO_H5} from './process'
 
 workflow camisim {
     take:
@@ -25,7 +28,7 @@ workflow camisim {
 
     simulation = CAMISIM(
         configs,
-        db
+        tax_db
     )
     
     sim_info = GENERATE_METADATA(
@@ -35,16 +38,15 @@ workflow camisim {
     coverage_txt = SAMTOOLS_DEPTH(
         simulation.bam
             .transpose()
-            .map{[it[0], it[1].toString().find(/V\d+/), it[1]]}
+            .map{[it[0], it[1].getSimpleName().tokenize('-')[0], it[1]]}
             .groupTuple(by: [0, 1])
     )
-
+    
     TO_H5(
         coverage_txt
             .groupTuple(by: 0)
-            .collect{it[1][1]}
             .combine(sim_info.table, by: 0)
-    )    
+    )        
 }
  
 workflow all {

@@ -3,6 +3,7 @@
 import configparser
 import pandas as pd
 import argparse
+from pathlib import Path
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 
 
@@ -42,6 +43,8 @@ def main():
 
 def split_genomes(fasta, min_size=None, folder='source-genomes'):
     sizes = {}
+    Path(folder).mkdir()
+    
     with open(fasta, 'r') as handle:
         for (title, genome) in SimpleFastaParser(handle):
             g_id = title.split()[0]
@@ -82,7 +85,7 @@ def generate_config(ds_name=None, cami_data='.', project_path='.',
         'fragment_size_standard_deviation': 10
     }
     config['CommunityDesign'] = {
-        'ncbi_taxdump': f'{cami_data}/tools/ncbi-taxonomy_20190708.tar.gz',
+        'ncbi_taxdump': 'new_taxdump.tar.gz',
         'number_of_samples': n_samples
     }
     config['community0'] = {
