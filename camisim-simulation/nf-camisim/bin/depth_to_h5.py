@@ -39,17 +39,16 @@ def main():
             filename, sep='\t', header=None,
             usecols=range(1, args.n_samples+2), dtype=int
         ).set_index(1)
-        coverage.index -= 1 # since samtools positions are 1-based
         coverage.columns = [f'sample_{i+1}' for i in range(args.n_samples)]
         coverage = (coverage
-                    .reindex(index=range(sizes.loc[virus]))
+                    .reindex(index=range(1, 1+sizes.loc[virus]))
                     .fillna(0)
                     .to_numpy().T)
 
         cov_vir_h5.create_dataset(virus, data=coverage)
 
         for ctg, start, end in zip(*info.loc[virus, ["C_id", "start", "end"]]):
-            cov_ctg_h5.create_dataset(ctg, data=coverage[:,start:end+1])
+            cov_ctg_h5.create_dataset(ctg, data=coverage[:,start-1:end])
 
     cov_ctg_h5.close()
     cov_vir_h5.close()

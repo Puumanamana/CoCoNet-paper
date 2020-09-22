@@ -50,7 +50,7 @@ workflow camisim {
     TO_H5(
         coverage_txt
             .groupTuple(by: 0)
-            .combine(sim_info.table, by: 0),
+            .combine(sim_info.table, by: 0)
             .combine(configs.sizes, by: 0)
     )        
 }
