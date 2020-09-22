@@ -151,7 +151,7 @@ process SAMTOOLS_DEPTH {
     tuple val(meta), val(genome), path(bams)
 
     output:
-    tuple val(meta), val(genome), path("*.txt")
+    tuple val(meta), path("*.txt")
 
     script:
     """
