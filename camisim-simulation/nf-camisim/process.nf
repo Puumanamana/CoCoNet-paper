@@ -69,8 +69,8 @@ process GENERATE_METADATA {
     tuple val(meta), path(fasta)
 
     output:
-    tuple val(meta), path('metadata.csv')
-    path 'assembly.fasta'
+    tuple val(meta), path('metadata.csv'), emit: table
+    path 'assembly.fasta', emit: assembly
 
     script:
     """

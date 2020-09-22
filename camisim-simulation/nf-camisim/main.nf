@@ -35,7 +35,7 @@ workflow {
         coverage_txt
             .groupTuple(by: 0)
             .collect{it[1][1]}
-            .combine(sim_info, by: 0)
+            .combine(sim_info.table, by: 0)
     )
     
 }
