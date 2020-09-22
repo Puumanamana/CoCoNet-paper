@@ -40,7 +40,8 @@ process GENERATE_CONFIG {
     each replicate
 
     output:
-    tuple val(meta), path('*.{ini,tsv}'), path('source-genomes')
+    tuple val(meta), path('*.{ini,tsv}'), path('source-genomes'), emit: camisim
+    tuple val(meta), path('genome_sizes.csv'), emit: sizes
 
     script:
     meta = [
@@ -140,8 +141,7 @@ process TO_H5 {
     container 'nakor/coconet-paper-python'
 
     input:
-    tuple val(meta), path(depth), path(sim_info)
-    path genome_sizes
+    tuple val(meta), path(depth), path(sim_info), path(genome_sizes)
 
     output:
     path("coverage_virus.h5")

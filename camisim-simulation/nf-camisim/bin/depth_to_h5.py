@@ -24,8 +24,7 @@ def main():
     metadata = pd.read_csv(args.metadata)
 
     info = metadata.groupby("V_id").agg(list)
-    sizes = pd.read_csv(args.genome_sizes, header=None, index_col=0,
-                        names=['genome', 'size'])['size']
+    sizes = pd.read_csv(args.genome_sizes, index_col=0).iloc[:, 0]
 
     cov_vir_h5 = h5py.File("coverage_virus.h5","w")
     cov_ctg_h5 = h5py.File("coverage_contigs.h5","w")

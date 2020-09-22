@@ -28,7 +28,8 @@ def main():
 
     genome_sizes = pd.Series(split_and_clean_genomes(args.db, args.min_genome_size))
     sub_genomes = genome_sizes.sample(args.n_genomes)
-
+    sub_genomes.to_csv('genome_sizes.csv', header=True, index=True)
+    
     generate_config(size=args.cov_lvl*sub_genomes.sum()/1e9,
                     n_samples=args.n_samples,
                     n_genomes=len(sub_genomes),
@@ -57,7 +58,7 @@ def split_and_clean_genomes(fasta, min_size=None, folder='source-genomes'):
                 sizes[f'V{i}'] = len(genome_clean)
     return sizes
 
-def generate_config(ds_name=None, cami_data='.', project_path='.',
+def generate_config(ds_name=None, cami_data='.',
                     size=1, n_samples=5, n_genomes=6000,
                     log_mu=1, log_sigma=2, threads=1):
     config = configparser.ConfigParser()
@@ -88,8 +89,8 @@ def generate_config(ds_name=None, cami_data='.', project_path='.',
         'number_of_samples': n_samples
     }
     config['community0'] = {
-        'metadata': f'{project_path}/metadata_camisim.tsv',
-        'id_to_genome_file': f'{project_path}/id_to_genome.tsv',
+        'metadata': 'metadata_camisim.tsv',
+        'id_to_genome_file': 'id_to_genome.tsv',
         'genomes_total': n_genomes,
         'genomes_real': n_genomes,
         'max_strains_per_otu': 1,
@@ -101,13 +102,13 @@ def generate_config(ds_name=None, cami_data='.', project_path='.',
     with open('config.ini', 'w') as configfile:
         config.write(configfile)
 
-def generate_id_to_genome(genomes,out_dir="."):
+def generate_id_to_genome(genomes):
     mapping = pd.Series({f.split(".")[0]: f"source-genomes/{f}.fasta" for f in genomes})
-    mapping.to_csv(f"{out_dir}/id_to_genome.tsv", sep="\t", header=False)
+    mapping.to_csv("id_to_genome.tsv", sep="\t", header=False)
 
-def generate_metadata(out_dir="."):
+def generate_metadata():
 
-    meta_camisim = pd.read_csv(f"{out_dir}/id_to_genome.tsv", sep="\t", index_col=0, header=None)
+    meta_camisim = pd.read_csv("id_to_genome.tsv", sep="\t", index_col=0, header=None)
     metadata = pd.DataFrame(columns=["OTU", "NCBI_ID", "novelty_category"], index=meta_camisim.index)
     metadata.index.name = "genome_ID"
 
@@ -115,8 +116,9 @@ def generate_metadata(out_dir="."):
     metadata["NCBI_ID"] = 10239
     metadata["novelty_category"] = 'new_species'
 
-    metadata.to_csv(f"{out_dir}/metadata_camisim.tsv", sep="\t")
+    metadata.to_csv("metadata_camisim.tsv", sep="\t")
 
-
+    
+    
 if __name__ == '__main__':
     main()
