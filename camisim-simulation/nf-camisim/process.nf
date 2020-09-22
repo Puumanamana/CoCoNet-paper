@@ -1,6 +1,7 @@
 process GENERATE_CONFIG {
     tag "$meta.id"
     label 'low_computation'
+    conda 'pandas biopython configparser'
 	
     input:
     each xcoverage
@@ -20,14 +21,12 @@ process GENERATE_CONFIG {
         replicate: replicate,
     ]
     """
-    [ -z \$CAMI_SRC ] && echo "Environment variable to camisim data folder not defined. Exiting." && exit 1
-
     generate_camisim_metadata.py \
         --name $meta.id
         --cov_lvl $xcoverage \
         --n_samples $n_samples \
         --n_contigs $n_genomes \
-        --cami_data $params.cami_data \
+        --cami-data $params.cami_data \
         --log-mu 1 \
         --log-sigma 2
     """
@@ -37,7 +36,6 @@ process CAMISIM {
     tag "$meta.id"
     label 'high_computation'
     container 'nakor/coconet-paper-camisim'
-    // container 'cami/camisim' // old release
     
     input:
     tuple val(meta), path(config_files)
@@ -97,6 +95,7 @@ process GENERATE_METADATA {
 process SAMTOOLS_DEPTH {
     label 'medium_computation'
     tag "${meta.id}_${genome}"
+    conda 'samtools'
 
 	input:
     tuple val(meta), val(genome), path(bams)
@@ -114,6 +113,7 @@ process TO_H5 {
     tag {"$meta.id"}
     publishDir "${params.outdir}/${id}", mode: "copy"
     label 'medium_computation'
+    conda 'pandas h5py'
 	
     input:
     tuple val(meta), file(depth), file(meta_file)

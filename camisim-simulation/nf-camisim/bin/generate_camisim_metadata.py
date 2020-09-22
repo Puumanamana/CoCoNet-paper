@@ -11,7 +11,7 @@ def parse_args():
     parser.add_argument('--n_samples', type=int)
     parser.add_argument('--n_genomes', type=int)
     parser.add_argument('--db', type=str)
-    parser.add_argument('--cami_data', type=str, default='.')
+    parser.add_argument('--cami-data', type=str, default='.')
     parser.add_argument('--log-mu', type=int, default=1)
     parser.add_argument('--log-sigma', type=int, default=2)
     

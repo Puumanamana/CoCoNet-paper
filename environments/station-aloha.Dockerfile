@@ -3,8 +3,8 @@ LABEL author="carisdak@hawaii.edu"
 
 RUN apt-get update && apt-get install -y procps git && apt-get clean -y
 
-COPY conda_env.yml /
-RUN conda env create -f /conda_env.yml && conda clean -a
+COPY conda-station-aloha.yaml /
+RUN conda env create -f /conda-station-aloha.yaml && conda clean -a
 COPY diamond /opt/conda/envs/nf-station-aloha/bin
 
 #=================================================#

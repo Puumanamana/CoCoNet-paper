@@ -1,4 +1,5 @@
 #!/usr/bin/env nextflow
+
 nextflow.enable.dsl = 2
 
 include {GENERATE_CONFIG ; CAMISIM ; GENERATE_METADATA; SAMTOOLS_DEPTH; TO_H5} from process
