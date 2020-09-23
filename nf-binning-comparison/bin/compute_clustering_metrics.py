@@ -2,7 +2,9 @@
 
 import argparse
 from pathlib import Path
+from itertools import combinations
 
+import numpy as np
 import pandas as pd
 import sklearn.metrics
 
@@ -53,14 +55,29 @@ def load(files, truth=None):
     return results
 
 def compute_scores(data, output=None, metrics=None):
-    scores = {metric: {} for metric in metrics}
-
-    for metric in metrics:
-        for method in data.columns.drop('truth'):
+    scores = {}
+    for method in data.columns.drop('truth'):
+        scores[method] = {}
+        for metric in metrics:
             fn = getattr(sklearn.metrics, metric)
-            scores[metric][method] = fn(data.truth, data[method])
+            scores[method][metric] = fn(data.truth, data[method])
 
-    scores = pd.DataFrame(scores)
+        truth_npy = data.truth.values
+        pred_npy = data[method].values
+        matrix = np.zeros((2, 2))
+
+        for (i, j) in combinations(range(len(truth_npy)), 2):
+            matrix[
+                int(truth_npy[i] == truth_npy[j]),
+                int(pred_npy[i] == pred_npy[j])
+            ] += 1
+        
+        scores[method]['TN'] = matrix[0, 0]
+        scores[method]['TP'] = matrix[1, 1]        
+        scores[method]['FP'] = matrix[0, 1]
+        scores[method]['FN'] = matrix[1, 0]        
+
+    scores = pd.DataFrame(scores).T
 
     if output is None:
         print(scores)

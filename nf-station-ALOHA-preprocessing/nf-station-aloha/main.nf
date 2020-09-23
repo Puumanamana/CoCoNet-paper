@@ -21,30 +21,29 @@ workflow illumina {
 
     emit:
     assembly = illumina_assembly
-    coverage = coverage
+    coverage = coverage.bam_bai
 }
 
 workflow ont {
     take:
     project_accession
+    illumina_assembly
 
     main:
     draft_genomes = DOWNLOAD_ONT_ASSEMBLY(project_accession)
     draft_genomes_unique = DEDUPLICATION_ONT(draft_genomes)
-
-    emit:
-    genomes = draft_genomes_unique
-
+    MAP_ILLUMINA_ONT(illumina_assembly, ont_assembly)
 }
 
 workflow {
     // Generate assembly from illumina reads
-    accessions = Channel.from(["SRR5677468", "SRR8811962", "SRR8811963"])
 
-    illumina_assembly = illumina(accessions).assembly
-    ont_assembly = ont("PRJNA529454").genomes
-    
-    // Map illumina assembly on ONT assembly
-    MAP_ILLUMINA_ONT(illumina_assembly, ont_assembly)
-    
+    if (params.run_assembly) {
+        accessions = Channel.from(["SRR5677468", "SRR8811962", "SRR8811963"])
+        illumina_assembly = illumina(accessions).assembly
+    } else {
+        illumina_assembly = file(params.assembly, checkIfExists: true)
+    }
+
+    ont("PRJNA529454", illumina_assembly)
 }

@@ -11,7 +11,7 @@ process DOWNLOAD_ILLUMINA_READS {
 
     script:
     """
-    # fasterq-dump fails for some accesions (github issue #318)
+    # fasterq-dump fails for some accessions (github issue #318)
     # To circumvent this issue, we can use prefetch first
 
     prefetch $sample \\
@@ -28,6 +28,7 @@ process DOWNLOAD_ILLUMINA_READS {
 
 process DOWNLOAD_ONT_ASSEMBLY {
     publishDir "$params.outdir/ONT-assemblies", mode: "copy"
+    label "low_computation"
 
     input:
     val accession
@@ -47,6 +48,7 @@ process DOWNLOAD_ONT_ASSEMBLY {
 process TRIMMING_FASTP {
     tag {"$sample"}
     publishDir "$params.outdir/illumina-reads/trimmed", mode: "copy"
+    label "medium_computation"
 
     input:
     tuple val(sample), path(fastqs)
@@ -96,7 +98,8 @@ process COASSEMBLY_METASPADES {
 
 
 process BWA_INDEX {
-
+    label 'low_computation'
+    
     input:
     path assembly
 
@@ -119,7 +122,8 @@ process BWA_MEM {
     tuple val(sample), path(reads)
 
     output:
-    tuple val(sample), path("*.bam"), path("*.bai")
+    tuple val(sample), path("*.bam"), path("*.bai"), emit: bam_bai
+    path 'template_length.txt', emit: tlen
 
     script:
     """
@@ -128,6 +132,9 @@ process BWA_MEM {
         | samtools sort -@ $task.cpus -o ${sample}.bam
 
     samtools index -@ $task.cpus ${sample}.bam ${sample}.bai
+
+    # save fragment length information
+    samtools view -@ $task.cpus ${sample}.bam | awk '{print sqrt(\$9*\$9)}' | sort -n | uniq -c > template_length.txt
     """
 }
 
@@ -158,6 +165,7 @@ process MAP_ILLUMINA_ONT {
     output:
     path "alignments.tsv", emit: minimap2
     path "mapping.csv", emit: bins
+    path "summary.txt", eit: summary
 
     script:
     """
@@ -167,10 +175,25 @@ process MAP_ILLUMINA_ONT {
     # - query coverage > 95% (column #10/#2)
     # - no secondary alignments (flag tp:A:S)
 
-    minimap2 $ont_assembly $illumina_assembly -t $task.cpus \\
-        | grep -v 'tp:A:S'
-        | awk '\$12 > 30 && \$10/\$2 > 0.95'
-        > alignments.tsv
+    minimap2 $ont_assembly $illumina_assembly -t $task.cpus > minimap.tsv
+
+    echo "#total hits: \$(wc -l minimap.tsv | cut -d' ' -f1)" >> summary.txt
+    echo "#primary hits: \$(grep -c tp:A:P minimap.tsv)" >> summary.txt
+    echo "#secondary hits: \$(grep -c tp:A:S minimap.tsv)" >> summary.txt    
+    echo "#inversion hits: \$(grep -c tp:A:I minimap.tsv)" >> summary.txt
+    echo "#hits coverage>25%: \$(awk '\$10/\$2 > 0.25'  minimap.tsv)" >> summary.txt
+    echo "#hits coverage>50%: \$(awk '\$10/\$2 > 0.5'  minimap.tsv)" >> summary.txt
+    echo "#hits coverage>75%: \$(awk '\$10/\$2 > 0.75'  minimap.tsv)" >> summary.txt
+    echo "#hits coverage>95%: \$(awk '\$10/\$2 > 0.95'  minimap.tsv)" >> summary.txt
+    echo "#hit quality>10: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+    echo "#hit quality>20: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+    echo "#hit quality>30: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+    echo "#hit quality>40: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+    echo "#hit quality>50: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+
+    
+    grep -v 'tp:A:S' minimap.tsv | awk '\$12 > 30 && \$10/\$2 > 0.95'
+    > alignments.tsv
 
     # 3) Make mapping file
     cut -f1,6 alignments.tsv | sed 's/\\t/,/g' > mapping.csv
