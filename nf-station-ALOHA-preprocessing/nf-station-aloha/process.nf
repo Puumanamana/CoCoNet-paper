@@ -165,7 +165,7 @@ process MAP_ILLUMINA_ONT {
     output:
     path "alignments.tsv", emit: minimap2
     path "mapping.csv", emit: bins
-    path "summary.txt", eit: summary
+    path "summary.txt", emit: summary
 
     script:
     """

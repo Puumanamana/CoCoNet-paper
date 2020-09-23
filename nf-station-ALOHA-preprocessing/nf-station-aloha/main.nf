@@ -30,9 +30,9 @@ workflow ont {
     illumina_assembly
 
     main:
-    draft_genomes = DOWNLOAD_ONT_ASSEMBLY(project_accession)
-    draft_genomes_unique = DEDUPLICATION_ONT(draft_genomes)
-    MAP_ILLUMINA_ONT(illumina_assembly, ont_assembly)
+    ont_assembly = DOWNLOAD_ONT_ASSEMBLY(project_accession)
+    ont_assembly_unique = DEDUPLICATION_ONT(draft_genomes)
+    MAP_ILLUMINA_ONT(illumina_assembly, ont_assembly_unique)
 }
 
 workflow {

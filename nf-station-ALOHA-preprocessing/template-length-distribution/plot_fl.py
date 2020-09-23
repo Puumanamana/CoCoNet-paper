@@ -46,8 +46,7 @@ def plot_tlen(size=1, margin=0.2):
     grid.map(sns.barplot, 'tlen', 'freq', order=counts.tlen.drop_duplicates())
     grid.set_xticklabels(rotation=90)
     plt.subplots_adjust(bottom=margin)
-    grid.savefig('template_length.pdf')
+    grid.savefig('template_length.png')
 
 if __name__ == '__main__':
     plot_tlen(2, 0.1)
-    import ipdb;ipdb.set_trace()
