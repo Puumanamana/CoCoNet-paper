@@ -177,23 +177,21 @@ process MAP_ILLUMINA_ONT {
 
     minimap2 $ont_assembly $illumina_assembly -t $task.cpus > minimap.tsv
 
-    echo "#total hits: \$(wc -l minimap.tsv | cut -d' ' -f1)" >> summary.txt
+    echo "#total hits: \$(cat minimap.tsv | wc -l)" >> summary.txt
     echo "#primary hits: \$(grep -c tp:A:P minimap.tsv)" >> summary.txt
     echo "#secondary hits: \$(grep -c tp:A:S minimap.tsv)" >> summary.txt    
     echo "#inversion hits: \$(grep -c tp:A:I minimap.tsv)" >> summary.txt
-    echo "#hits coverage>25%: \$(awk '\$10/\$2 > 0.25'  minimap.tsv)" >> summary.txt
-    echo "#hits coverage>50%: \$(awk '\$10/\$2 > 0.5'  minimap.tsv)" >> summary.txt
-    echo "#hits coverage>75%: \$(awk '\$10/\$2 > 0.75'  minimap.tsv)" >> summary.txt
-    echo "#hits coverage>95%: \$(awk '\$10/\$2 > 0.95'  minimap.tsv)" >> summary.txt
-    echo "#hit quality>10: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
-    echo "#hit quality>20: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
-    echo "#hit quality>30: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
-    echo "#hit quality>40: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
-    echo "#hit quality>50: \$(awk '\$12 > 30'  minimap.tsv)" >> summary.txt
+    echo "#hits coverage>25%: \$(awk '\$10/\$2 > 0.25'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hits coverage>50%: \$(awk '\$10/\$2 > 0.5'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hits coverage>75%: \$(awk '\$10/\$2 > 0.75'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hits coverage>95%: \$(awk '\$10/\$2 > 0.95'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hit quality>10: \$(awk '\$12 > 30'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hit quality>20: \$(awk '\$12 > 30'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hit quality>30: \$(awk '\$12 > 30'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hit quality>40: \$(awk '\$12 > 30'  minimap.tsv | wc -l)" >> summary.txt
+    echo "#hit quality>50: \$(awk '\$12 > 30'  minimap.tsv | wc -l)" >> summary.txt
 
-    
-    grep -v 'tp:A:S' minimap.tsv | awk '\$12 > 30 && \$10/\$2 > 0.95'
-    > alignments.tsv
+    grep -v 'tp:A:S' minimap.tsv | awk '\$12 > 30 && \$10/\$2 > 0.95' > alignments.tsv
 
     # 3) Make mapping file
     cut -f1,6 alignments.tsv | sed 's/\\t/,/g' > mapping.csv

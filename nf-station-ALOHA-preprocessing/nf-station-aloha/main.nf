@@ -31,7 +31,7 @@ workflow ont {
 
     main:
     ont_assembly = DOWNLOAD_ONT_ASSEMBLY(project_accession)
-    ont_assembly_unique = DEDUPLICATION_ONT(draft_genomes)
+    ont_assembly_unique = DEDUPLICATION_ONT(ont_assembly)
     MAP_ILLUMINA_ONT(illumina_assembly, ont_assembly_unique)
 }
 

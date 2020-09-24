@@ -19,7 +19,7 @@ def get_freqs(bins=20):
     data = {}
     for filename in Path('.').glob('tlen-*.txt'):
         n = int(get_last_line(filename).strip().split()[-1])
-        name = filename.stem.split('-')[-1]
+        name = filename.stem.split('-')[-1].replace('015', '15')
     
         data[name] = np.zeros(n+1)
         for entry in open(filename):
@@ -27,7 +27,7 @@ def get_freqs(bins=20):
             data[name][int(tlen)] = int(freq)
 
     for f, counts in data.items():
-        counts = pd.Series(counts[0:2000]).reset_index()
+        counts = pd.Series(counts[1:1500]).reset_index()
         counts.columns = ['tlen', 'freq']
         counts['sample'] = f
         
@@ -39,14 +39,18 @@ def get_freqs(bins=20):
     
     return data
 
-def plot_tlen(size=1, margin=0.2):
-    counts = get_freqs()
-
-    grid = sns.FacetGrid(data=counts, col='sample', sharey=False, col_order=sorted(counts['sample'].unique()), height=size)
+def plot_tlen(counts, fmt='png', **kwargs):
+    grid = sns.FacetGrid(data=counts, col='sample', col_wrap=2,
+                         col_order=['15m', '117m', '250m'],
+                         sharex=False, sharey=False, aspect=2,
+                         **kwargs)
     grid.map(sns.barplot, 'tlen', 'freq', order=counts.tlen.drop_duplicates())
-    grid.set_xticklabels(rotation=90)
-    plt.subplots_adjust(bottom=margin)
-    grid.savefig('template_length.png')
+    grid.set_xticklabels(rotation=90, size=5)
+    grid.set(xlabel='template length', ylabel='read count')
+    grid.set_titles("sample: {col_name}", fontweight='bold')
+    plt.subplots_adjust(hspace=0.5)
+    grid.savefig(f'template_length.{fmt}', dpi=300)
 
 if __name__ == '__main__':
-    plot_tlen(2, 0.1)
+    counts = get_freqs()
+    plot_tlen(counts)
