@@ -193,11 +193,11 @@ process MAP_ILLUMINA_ONT {
 
     grep -v 'tp:A:S' minimap.tsv | awk '\$12 > 30 && \$10/\$2 > 0.95' > alignments.tsv
 
-    # 3) Make mapping file
-    cut -f1,6 alignments.tsv | sed 's/\\t/,/g' > mapping.csv
-
-    # 4) Check if some illumina contigs map on multiple ONT contigs (case not handled)
+    # 3) Check if some illumina contigs map on multiple ONT contigs (case not handled)
     cut -f1 alignments.tsv | sort | uniq -c | awk '\$1 > 1' > multimappers.txt
     [ -s multimappers.txt ] && echo "Some contigs are mapping on multiple references. Aborting." && exit 1
+
+    # 4) Make mapping file
+    cut -f1,6 alignments.tsv | sed 's/\\t/,/g' > mapping.csv
     """
 }
