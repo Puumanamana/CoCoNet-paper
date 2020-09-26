@@ -60,7 +60,7 @@ workflow camisim {
 workflow all {
     camisim(
         [4, 10],
-        [5, 20],
+        [3, 15],
         [500, 2000],
         10
     )
