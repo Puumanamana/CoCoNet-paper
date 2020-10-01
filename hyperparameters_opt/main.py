@@ -20,6 +20,7 @@ def coconet_init(args):
     coconet.preprocess(cfg)
     coconet.make_train_test(cfg)
     coconet.learn(cfg)
+    coconet.precompute_latent_repr(cfg)
 
     return cfg
 
@@ -31,9 +32,10 @@ def compute_score(bins_file):
 
 def compute_SA_score(bins_file, truth_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
-    truth = pd.read_csv(truth_file, header=None, names=['contig', 'truth'])
+    reference = pd.read_csv(truth_file, header=None, names=['contig', 'truth'])
+    reference['truth'] = pd.factorize(reference.truth)[0]
 
-    df = assignments.merge(truth, how='inner')
+    df = assignments.merge(reference, how='inner')
 
     return adjusted_rand_score(df.truth, df.pred)
 
@@ -78,15 +80,16 @@ def main():
         coconet.cluster(config)
 
         # Compute the score
-        if 'station_aloha' in str(args.fasta).lower():
+        if 'aloha' in str(args.fasta).lower():
             truth_file = Path(Path(args.fasta).parent, 'truth.csv')
-            validation_error = compute_SA_score(config.io['assignments'],
+            validation_score = compute_SA_score(config.io['assignments'],
                                                 str(truth_file))
         else:
-            validation_error = compute_score(config.io['assignments'])
+            validation_score = compute_score(config.io['assignments'])
 
+        print(f'Validation score: {validation_score:.2f}')
         # Add to study
-        study.add_observation(trial=trial, objective=validation_error)
+        study.add_observation(trial=trial, objective=validation_score)
         study.finalize(trial)
         study.save(f'{str(sherpa_outdir)}')
 

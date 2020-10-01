@@ -67,7 +67,7 @@ process GENERATE_CONFIG {
 
 process CAMISIM {
     tag "$meta.id"
-    publishDir "$params.outdir/$meta.id/bam"
+    publishDir "$params.outdir/$meta.id"
 
     container 'nakor/coconet-paper-camisim'
     label 'high_computation'
@@ -87,10 +87,7 @@ process CAMISIM {
     metagenomesimulation.py -s0 -p $task.cpus config.ini
 
     # Rename bam files
-    for bam in `ls camisim*/*sample*/bam/*.bam` ; do
-        [[ "\$bam" =~ sample_[0-9]* ]] && sample_nb=\$BASH_REMATCH || echo "no sample id found" ||  exit 1
-        mv \$bam \${bam%.*}-\${sample_nb}.bam
-    done
+    rename-camisim.py
     """
 }
 

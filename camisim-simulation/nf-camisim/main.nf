@@ -66,6 +66,14 @@ workflow all {
     )
 }
 
+workflow optimize {
+    camisim(
+        [4, 10],
+        [3, 15],
+        [500],
+        1
+    )
+}
 
 // Test runner
 workflow test {

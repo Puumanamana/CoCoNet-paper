@@ -11,6 +11,10 @@ Station_Aloha
 *.pdf
 *.png
 *.bak
+*.txt
 results*
 input-data
 Station-Aloha*
+hyperparameters_opt
+!hyperparameters_opt/main.py
+!hyperparameters_opt/makefile
