@@ -90,7 +90,7 @@ def main():
 
                 logger.info((
                     f'(Batch #{i:,} / {n_batch:,}, {coverage_mode}) '
-                    f'accuracy={metrics["acc"]:.2%}, AUC={metrics["AUC"]:.2%}'
+                    f'accuracy={metrics["accuracy"]:.2%}, AUC={metrics["AUC"]:.2%}'
                 ))
 
     scores = pd.DataFrame(scores)
@@ -130,9 +130,9 @@ def get_scores(truth, pred):
     summary = confusion_matrix(truth, pred_bin)
 
     return dict(
-        acc=accuracy_score(truth, pred_bin),
+        accuracy=accuracy_score(truth, pred_bin),
         AUC=roc_auc_score(truth, pred),
-        prec=precision_score(truth, pred_bin),
+        precision=precision_score(truth, pred_bin),
         recall=recall_score(truth, pred_bin),
         TN=summary[0, 0],
         TP=summary[1, 1],

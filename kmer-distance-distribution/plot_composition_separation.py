@@ -61,7 +61,7 @@ def plot(distances):
     plt.ylabel('Distance', fontsize=14)
     plt.legend(title='')
 
-    plt.savefig('Figure 1-Composition_separation_with_fl.pdf', transparent=True)
+    plt.savefig('Figure-1_Composition-separation-with-fl.pdf', transparent=True)
     plt.show()
 
 

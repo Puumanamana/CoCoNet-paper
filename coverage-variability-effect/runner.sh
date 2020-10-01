@@ -2,7 +2,7 @@
 
 set -e
 
-for f in `ls input_data  | shuf `; do
+for f in `ls input_data | shuf `; do
     if [ -f results/test-${f}.csv ]; then
         echo "$f already processed"
         continue

@@ -21,8 +21,13 @@ data = pd.concat(data).reset_index(drop=True)
 
 data_last = data[data.batch==3800]
 data_plot = data_last.melt(
-    id_vars=[x for x in data.columns if x not in {'acc', 'AUC', 'prec', 'recall'}]
+    id_vars=[x for x in data.columns if x not in {'accuracy', 'AUC', 'precision', 'recall'}],
+    value_name='score',
+    var_name='metric'
 )
 
-sns.catplot(kind='box', data=data_plot, x='variable', y='value', hue='mode', col='coverage', row='n_samples')
+grid = sns.catplot(kind='box', data=data_plot, x='metric', y='score', hue='mode', col='coverage', row='n_samples')
+grid._legend.set_title('')
+grid.savefig('performance-with-coverage-variability.png')
+
 plt.show()
