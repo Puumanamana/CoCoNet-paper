@@ -1,8 +1,8 @@
-DATA_DIR ?= input-data
+INPUT ?= data
 
 figure:
 	python main.py run \
-    --fasta $(DATA_DIR)/assembly.fasta \
-    --h5 $(DATA_DIR)/coverage_contigs.h5 \
-    --output output \
+    --fasta $(INPUT)/assembly.fasta \
+    --h5 $(INPUT)/coverage_contigs.h5 \
+    --output results \
     --features coverage

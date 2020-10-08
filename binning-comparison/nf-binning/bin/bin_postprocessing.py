@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+import pandas as pd
 
 def parse_args():
     '''
@@ -20,14 +21,14 @@ def merge_contigs(fasta, assignments):
     bin_max = max(contigs.keys())
 
     with open(fasta) as handle:
-        for (ctg_descr, ctg) in SimpleFastaParser(handle):
+        for (ctg_descr, seq) in SimpleFastaParser(handle):
             ctg_id = ctg_descr.split()[0]
             if ctg_id in assignments:
-                contigs[assignments[ctg_id]] += ctg
+                contigs[assignments[ctg_id]] += seq
             else:
                 # singleton bin
                 bin_max += 1
-                contigs[bin_max] = ctg
+                contigs[bin_max] = seq
                 assignments[ctg_id] = bin_max
 
     return contigs
@@ -47,7 +48,9 @@ def main():
     '''
 
     args = parse_args()
-    assignments = {ctg: int(b) for (ctg, b) in map(lambda x: x.strip().split(','), open(args.bins))}
+    assignments = pd.read_csv(args.bins, header=None, names=['contig', 'bin_id'])
+    assignments.bin_id = pd.factorize(assignments.bin_id)[0]
+    assignments = assignments.set_index('contig').bin_id.to_dict()
 
     prefix = Path(args.bins).stem
     merged = merge_contigs(args.fasta, assignments)

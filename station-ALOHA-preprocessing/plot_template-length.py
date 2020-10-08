@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from pathlib import Path
 
@@ -6,24 +8,17 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def get_last_line(f):
-    with open(f, 'rb') as f:
-        f.seek(-2, os.SEEK_END)
-        while f.read(1) != b'\n':
-            f.seek(-2, os.SEEK_CUR)
-        last_line = f.readline().decode()
-
-    return last_line
 
 def get_freqs(bins=20):
     data = {}
-    for filename in Path('.').glob('tlen-*.txt'):
-        n = int(get_last_line(filename).strip().split()[-1])
+    for filename in Path('results').glob('tlen-*.csv'):
         name = filename.stem.split('-')[-1].replace('015', '15')
+        
+        max_tlen = int(get_last_line(filename).split(',')[-1])
     
-        data[name] = np.zeros(n+1)
+        data[name] = np.zeros(max_tlen+1)
         for entry in open(filename):
-            freq, tlen = entry.split()
+            freq, tlen = entry.split(',')
             data[name][int(tlen)] = int(freq)
 
     for f, counts in data.items():
@@ -47,9 +42,19 @@ def plot_tlen(counts, fmt='png', **kwargs):
     grid.map(sns.barplot, 'tlen', 'freq', order=counts.tlen.drop_duplicates())
     grid.set_xticklabels(rotation=90, size=5)
     grid.set(xlabel='template length', ylabel='read count')
-    grid.set_titles("sample: {col_name}", fontweight='bold')
+    grid.set_titles('sample: {col_name}', fontweight='bold')
     plt.subplots_adjust(hspace=0.5)
-    grid.savefig(f'template_length.{fmt}', dpi=300)
+    grid.savefig(f'results/template_length.{fmt}', dpi=300)
+
+def get_last_line(f):
+    with open(f, 'rb') as f:
+        f.seek(-2, os.SEEK_END)
+        while f.read(1) != b'\n':
+            f.seek(-2, os.SEEK_CUR)
+        last_line = f.readline().decode()
+
+    return last_line
+
 
 if __name__ == '__main__':
     counts = get_freqs()

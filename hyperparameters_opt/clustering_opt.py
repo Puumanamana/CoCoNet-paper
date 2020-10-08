@@ -28,7 +28,11 @@ def compute_score(bins_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
     assignments['truth'] = pd.factorize(assignments.contig.str.rpartition('|')[0])[0]
 
-    return adjusted_rand_score(assignments.truth, assignments.pred)
+    return dict(
+        ARI=adjusted_rand_score(assignments.truth, assignments.pred),
+        homogeneity=homogeneity_score(assignments.truth, assignments.pred),
+        completeness=completeness_score(assignments.truth, assignments.pred)
+    )
 
 def compute_SA_score(bins_file, truth_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
@@ -37,7 +41,11 @@ def compute_SA_score(bins_file, truth_file):
 
     df = assignments.merge(reference, how='inner')
 
-    return adjusted_rand_score(df.truth, df.pred)
+    return dict(
+        ARI=adjusted_rand_score(df.truth, df.pred),
+        homogeneity=homogeneity_score(df.truth, df.pred),
+        completeness=completeness_score(df.truth, df.pred)
+    )
 
 def main():
     '''
@@ -61,7 +69,7 @@ def main():
     if args.vote_threshold is not None:
         parameters.append(sherpa.Continuous('vote_threshold', [0.01, 0.99]))
     
-    algorithm = sherpa.algorithms.GPyOpt()
+    algorithm = sherpa.algorithms.GPyOpt(max_concurrent=3)
 
     study = sherpa.Study(parameters=parameters,
                          algorithm=algorithm,
@@ -82,14 +90,15 @@ def main():
         # Compute the score
         if 'aloha' in str(args.fasta).lower():
             truth_file = Path(Path(args.fasta).parent, 'truth.csv')
-            validation_score = compute_SA_score(config.io['assignments'],
-                                                str(truth_file))
+            validation_scores = compute_SA_scores(config.io['assignments'],
+                                                  str(truth_file))
         else:
-            validation_score = compute_score(config.io['assignments'])
+            validation_scores = compute_scores(config.io['assignments'])
 
-        print(f'Validation score: {validation_score:.2f}')
+        print(', '.join(f'{m}={v:.3g}' for (m, v) in validation_scores.items()))
         # Add to study
-        study.add_observation(trial=trial, objective=validation_score)
+        study.add_observation(trial=trial, objective=validation_scores.pop('ARI'),
+                              context=validation_scores)
         study.finalize(trial)
         study.save(f'{str(sherpa_outdir)}')
 

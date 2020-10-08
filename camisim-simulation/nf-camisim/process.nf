@@ -34,9 +34,9 @@ process GENERATE_CONFIG {
 
     input:
     path db
-    each xcoverage
-    each n_samples
     each n_genomes
+    each n_samples
+    each xcoverage
     each replicate
 
     output:
@@ -45,7 +45,7 @@ process GENERATE_CONFIG {
 
     script:
     meta = [
-        id: "camisim.lmu-${params.log_mu}.lsig-${params.log_sigma}.ns-${n_samples}.cov-${xcoverage}X.ng-${n_genomes}_${replicate}",
+        id: "camisim_${n_genomes}-genomes_${n_samples}-samples_${xcoverage}X_${replicate}",
         coverage: xcoverage,
         n_samples: n_samples,
         n_genomes: n_genomes,
@@ -59,9 +59,9 @@ process GENERATE_CONFIG {
         --cov_lvl $xcoverage \\
         --n_samples $n_samples \\
         --n_genomes $n_genomes \\
-        --cami-data $params.cami_data \\
-        --log-mu 1 \\
-        --log-sigma 2
+        --cami-data ${params.camisim.data} \\
+        --log-mu ${params.camisim.log_mu} \\
+        --log-sigma ${params.camisim.log_sigma}
     """
 }
 

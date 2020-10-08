@@ -8,6 +8,7 @@ include { COCONET_RUN } from './modules/coconet/run/process' addParams(outdir: "
 include { CONCOCT } from './modules/concoct/process' addParams(outdir: "$params.outdir/binning")
 include { METABAT2 } from './modules/metabat2/process' addParams(outdir: "$params.outdir/binning")
 include { MAXBIN2 } from './modules/maxbin2/process' addParams(outdir: "$params.outdir/binning")
+include { CHECKV_END_TO_END } from './modules/checkv/end_to_end/process' addParams(outdir: "$params.outdir/assessment")
 
 
 workflow binning {
@@ -17,7 +18,7 @@ workflow binning {
     main:
     ds = "${folder.getName()}"
     fasta = Channel.fromPath("${folder}/*.fasta").map{[ [id: ds], it]}
-    bams = Channel.fromPath("${folder}/*.bam").collect().map{[ [id: ds], it]}
+    bams = Channel.fromPath("${folder}/coverage/*.bam").collect().map{[ [id: ds], it]}
     h5 = Channel.fromPath("${folder}/*.{h5,hdf5}").map{[ [id: ds], it]}
     truth = file("${folder}/truth.csv")
 
@@ -52,11 +53,13 @@ workflow binning {
         [publish_dir: 'Metabat2',
          args: "--minContig ${params.min_ctg_len}"]
     ).bins
+    
     concoct_bins = CONCOCT(
         inputs.fasta.join(coverage.concoct),
         [publish_dir: 'CONCOCT',
          args: "--clusters ${params.concoct.max_clusters} --length_threshold ${params.min_ctg_len}"]
     ).bins
+    
     maxbin2_bins = MAXBIN2(
         inputs.fasta.join(coverage.maxbin2),
         [publish_dir: 'MaxBin2',
@@ -66,20 +69,28 @@ workflow binning {
     all_bins = coconet_bins.mix(metabat2_bins, concoct_bins, maxbin2_bins)
 
     // compute scores
-    COMPUTE_SCORES(
-        ds,
-        all_bins.collect{it[1]},
-        truth
-    )
+    // COMPUTE_SCORES(
+    //     ds,
+    //     all_bins.collect{it[1]},
+    //     truth
+    // )
 
     // reformating
-    BINS_TO_FASTA(
-        coconet_bins.mix(all_bins).combine(fasta, by: 0)
+    bins_fa = BINS_TO_FASTA(
+        all_bins.map{[[id: it[0].id], it]}.combine(inputs.fasta, by: 0).map{[it[1][0], it[1][1], it[2]]}
+    ).fasta.map{
+        [[id: "${it[0].id}-${it[0].method}"], it[1..-1]]
+    }
+
+    CHECKV_END_TO_END(
+        bins_fa,
+        file(params.checkv.db, checkIfExists: true),
+        [publish_dir: 'checkV']
     )
 }
 
 
-workflow all_sims {
+workflow sim {
     Channel.fromPath("${params.root_dir}/*", type: 'dir') | binning
 }
 

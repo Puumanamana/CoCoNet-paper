@@ -14,21 +14,17 @@ include {DOWNLOAD_VIRAL_REFSEQ;
 // Main logic
 workflow camisim {
     take:
+    n_genomes
+    n_samples
     coverage_levels
-    nb_samples
-    nb_genomes
-    nb_replicates
+    n_replicates
 
     main:
     db = DOWNLOAD_VIRAL_REFSEQ()
     tax_db = DOWNLOAD_TAXONOMY()
 
     configs = GENERATE_CONFIG(
-        db,
-        Channel.from(coverage_levels), 
-        Channel.from(nb_samples),
-        Channel.from(nb_genomes),
-        Channel.from(1..nb_replicates)
+        db, n_genomes, n_samples, coverage_levels, 1..n_replicates
     )
 
     simulation = CAMISIM(
@@ -56,31 +52,13 @@ workflow camisim {
 }
  
 
-// Runner on paper settings
-workflow all {
+// Runner
+// For testing, use default parameters
+workflow {
     camisim(
-        [4, 10],
-        [3, 15],
-        [500, 2000],
-        10
-    )
-}
-
-workflow optimize {
-    camisim(
-        [4, 10],
-        [3, 15],
-        [500],
-        1
-    )
-}
-
-// Test runner
-workflow test {
-    camisim(
-        [1],
-        [2, 3],
-        [5],
-        2
+        params.n_genomes.tokenize(','),
+        params.n_samples.tokenize(','),
+        params.x_coverage.tokenize(','),
+        params.n_replicates
     )
 }

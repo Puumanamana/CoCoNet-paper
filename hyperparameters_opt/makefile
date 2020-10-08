@@ -1,18 +1,26 @@
-FOLDER ?= 500_3_4_0
-OUTDIR ?= test-$(FOLDER)
 ARGS ?= 
+PHASE ?= clustering
+INPUT ?= data/station-ALOHA
+OUTPUT ?= results/$(notdir $(FOLDER))
+
 
 sim:
-	python main.py run $(ARGS) \
+	mkdir -p results/$(OUTPUT) && \
+	python $(PHASE)_opt.py run $(ARGS) \
 	    --threads 10 \
-		--fasta $(FOLDER)/assembly.fasta \
-		--h5 $(FOLDER)/coverage_contigs.h5 \
-		--output $(OUTDIR)
+		--fasta $(INPUT)/assembly.fasta \
+		--h5 $(INPUT)/coverage_contigs.h5 \
+		--output $(OUTPUT) \
+		--n-train 3000000 \
+		--debug
 
 aloha:
-	python main.py run $(ARGS) \
+	mkdir -p $(OUTPUT) && \
+	python $(PHASE)_opt.py run $(ARGS) \
 	    --threads 10 \
-		--fasta $(FOLDER)/assembly.fasta \
-		--bam $(FOLDER)/*.bam \
-		--output $(OUTDIR) \
-		--tlen-range 200 500
+		--fasta $(INPUT)/*.fasta \
+		--bam $(INPUT)/coverage/*.bam \
+		--output $(OUTPUT) \
+		--tlen-range 200 500 \
+		--n-train 3000000 \
+		--debug

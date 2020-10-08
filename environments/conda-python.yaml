@@ -10,3 +10,4 @@ dependencies:
   - pandas >=1
   - h5py
   - configparser
+  - scikit-learn

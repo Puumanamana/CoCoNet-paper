@@ -1,5 +1,6 @@
 process BAM_TO_ABD_TABLE{
-    conda 'bioconda::metabat2=2.15'
+    container 'quay.io/biocontainers/metabat2:2.15--h986a166_1'
+    conda (params.conda ? 'bioconda::metabat2=2.15' : null)
 
     input:
     tuple val(meta), path(coverage)
@@ -18,7 +19,9 @@ process BAM_TO_ABD_TABLE{
 
 process REFORMAT_COVERAGE {
     publishDir "${params.outdir}/coverage_tables", mode: 'copy'
-    conda 'pandas numpy h5py biopython'
+
+    container 'nakor/coconet-paper-python'
+    conda (params.conda ? 'pandas numpy h5py biopython' : null)
 
     input:
     tuple val(meta), path(fasta), path(coverage)
@@ -40,8 +43,9 @@ process REFORMAT_COVERAGE {
 
 process BINS_TO_FASTA {
     publishDir "${params.outdir}/merged_bins", mode: 'copy'
-    conda 'biopython'
-
+    container 'nakor/coconet-paper-python'
+    conda (params.conda ? 'biopython pandas' : null)
+    
     input:
     tuple val(meta), path(bins), path(fasta)
     
@@ -60,11 +64,12 @@ process BINS_TO_FASTA {
 
 process COMPUTE_SCORES {
     publishDir "${params.outdir}/scores", mode: 'copy'
-    conda 'scikit-learn pandas'
+    container 'nakor/coconet-paper-python'
+    conda (params.conda ? 'scikit-learn pandas' : null)
 
     input:
-    val(ds)
-    path(bins)
+    val ds
+    path bins
     path truth
 
     output:
