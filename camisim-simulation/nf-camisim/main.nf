@@ -56,9 +56,9 @@ workflow camisim {
 // For testing, use default parameters
 workflow {
     camisim(
-        params.n_genomes.tokenize(','),
-        params.n_samples.tokenize(','),
-        params.x_coverage.tokenize(','),
+        "${params.n_genomes}".tokenize(','),
+        "${params.n_samples}".tokenize(','),
+        "${params.x_coverage}".tokenize(','),
         params.n_replicates
     )
 }

@@ -14,15 +14,18 @@ process DOWNLOAD_TAXONOMY {
 }
 
 process DOWNLOAD_VIRAL_REFSEQ {
+    publishDir "$params.outdir/refseq-db"
     label 'low_computation'
+    container 'nakor/coconet-paper-python'
     
     output:
-    path '*.fna'
+    path '*ACGT.fna'
 
     script:
     """
     wget https://ftp.ncbi.nlm.nih.gov/refseq/release/viral/viral.{1,2}.1.genomic.fna.gz
-    zcat *.fna.gz | sed '/^>/! s/N//g' > viral_refseq.fna
+    zcat *.fna.gz | sed '/^>/! s/N//g' > viral-refseq.fna
+    clean_db.py --fasta viral-refseq.fna --output viral-refseq-ACGT.fna
     """
 }
 

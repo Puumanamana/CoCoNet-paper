@@ -1,17 +1,18 @@
-FOLDER ?= 2000_10_15_0
+FOLDER ?= data/camisim_2000-genomes_15-samples_10X_6
+SUFFIX = $(notdir $(FOLDER))
 
 sim:
 	echo "======== Processing $(FOLDER) ========" && \
 	python main.py run \
-	    --fasta input_data/$(FOLDER)/assembly.fasta \
-	    --h5 input_data/$(FOLDER)/coverage_contigs.h5 \
-	    --output workspace/output-$(FOLDER) \
+	    --fasta $(FOLDER)/assembly.fasta \
+	    --h5 $(FOLDER)/coverage_contigs.h5 \
+	    --output results/output-$(SUFFIX) \
 	    --features coverage
 
 SA:
 	echo "======== Processing $(FOLDER) ========" && \
 	python main.py run \
-	    --fasta input_data/$(FOLDER)/*.fasta \
-	    --bam input_data/$(FOLDER)/*.bam \
-	    --output workspace/output-$(FOLDER) \
+	    --fasta $(FOLDER)/*.fasta \
+	    --bam $(FOLDER)/*.bam \
+	    --output results/output-$(SUFFIX) \
 	    --features coverage

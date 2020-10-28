@@ -1,13 +1,13 @@
 ARGS ?= 
 PHASE ?= clustering
 INPUT ?= data/station-ALOHA
-OUTPUT ?= results/$(notdir $(FOLDER))
+OUTPUT ?= results/$(notdir $(INPUT))
 
 
 sim:
-	mkdir -p results/$(OUTPUT) && \
+	mkdir -p $(OUTPUT) && \
 	python $(PHASE)_opt.py run $(ARGS) \
-	    --threads 10 \
+	    --threads 60 \
 		--fasta $(INPUT)/assembly.fasta \
 		--h5 $(INPUT)/coverage_contigs.h5 \
 		--output $(OUTPUT) \
@@ -17,7 +17,7 @@ sim:
 aloha:
 	mkdir -p $(OUTPUT) && \
 	python $(PHASE)_opt.py run $(ARGS) \
-	    --threads 10 \
+	    --threads 60 \
 		--fasta $(INPUT)/*.fasta \
 		--bam $(INPUT)/coverage/*.bam \
 		--output $(OUTPUT) \

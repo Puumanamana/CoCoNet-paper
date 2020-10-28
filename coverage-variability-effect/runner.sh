@@ -2,16 +2,15 @@
 
 set -e
 
-for f in `ls input_data | shuf `; do
-    if [ -f results/test-${f}.csv ]; then
-        echo "$f already processed"
-        continue
-    elif [[ $f =~ ^[0-9] ]] ; then
-        h5=input_data/$f/coverage_contigs.h5
-        [ -f "${h5}.gz" ] \
-            && unpigz -p 20 "${h5}.gz"
+[ -z "$1" ] && exit 1 || data="$1"
+
+for f in $(ls -d $data/* | shuf); do
+    if [[ $(basename f) =~ ^[0-9] ]] ; then
+        h5=$f/coverage_contigs.h5
+        [ -f "${h5}.gz" ] && is_gz=1 || is_gz=0
+        [ is_gz -eq 1 ] && unpigz -p 20 "${h5}.gz"
         make sim FOLDER=$f
-        [ -f "${h5}" ] && pigz -p 20 $h5
+        [ is_gz -eq 1 ] && pigz -p 20 $h5
     elif [ $f != Station_Aloha-metaspades ]; then
         make SA FOLDER=$f
     fi

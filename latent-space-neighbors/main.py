@@ -14,7 +14,7 @@ from coconet.log import setup_logger
 sns.set(style='ticks', font_scale=0.7)
 
 def coconet_init(args):
-    setup_logger('CoCoNet', Path(args.output, 'CoCoNet.log'), args.loglvl)
+    setup_logger('<CoCoNet>', Path(args.output, 'CoCoNet.log'), args.loglvl)
     cfg = Configuration()
     cfg.init_config(**vars(args))
     cfg.to_yaml()
@@ -22,6 +22,7 @@ def coconet_init(args):
     coconet.preprocess(cfg)
     coconet.make_train_test(cfg)
     coconet.learn(cfg)
+    coconet.precompute_latent_repr(cfg)
 
     return cfg
 
@@ -52,8 +53,6 @@ def plot_distance_vs_prob(distances, truth):
     plt.show()
 
 def main():
-    '''
-    '''
 
     args = parser.parse_args()
 

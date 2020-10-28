@@ -47,7 +47,7 @@ def rename_fasta(fasta, metadata, output='assembly.fasta'):
          if not line.startswith('>'):
              writer.write(line)
          else:
-             writer.write(metadata.C_id[i]+'\n')
+             writer.write('>'+metadata.C_id[i]+'\n')
              i += 1
              
     writer.close()

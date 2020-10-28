@@ -40,46 +40,62 @@ process REFORMAT_COVERAGE {
     """    
 }
 
-
-process BINS_TO_FASTA {
+process MERGE_BINS {
     publishDir "${params.outdir}/merged_bins", mode: 'copy'
     container 'nakor/coconet-paper-python'
-    conda (params.conda ? 'biopython pandas' : null)
+    conda (params.conda ? 'biopython pandas bioconda::blast' : null)
     
     input:
     tuple val(meta), path(bins), path(fasta)
     
     output:
-    tuple val(meta), path("*.fasta"), emit: fasta
-    tuple val(meta), path("*.csv"), emit: bins // corrected bins if singletons were set aside
-    
+    tuple val(meta), path("*-merged.fasta"), emit: fasta
+    tuple val(meta), path("*-complete.csv"), emit: bins    
     script:
     """
-    bin_postprocessing.py \\
+    merge_bins.py \\
         --fasta $fasta \\
-        --bins $bins
-    """
+        --bins $bins \\
+        --min-dtr-size 10 \\
+        --max-dtr-size 300 \\
+        --min-dtr-id 0.95
+    """    
 }
 
-
-process COMPUTE_SCORES {
-    publishDir "${params.outdir}/scores", mode: 'copy'
+process COMPUTE_NN_METRICS {
     container 'nakor/coconet-paper-python'
     conda (params.conda ? 'scikit-learn pandas' : null)
 
     input:
-    val ds
-    path bins
+    tuple val(meta), path(test)
+
+    output:
+    path "nn_scores.csv"
+
+    script:
+    """
+    compute_nn_metrics.py --test $test --output nn_scores.csv --name $meta.id
+    """
+}
+
+process COMPUTE_CLUSTERING_METRICS {
+    tag {"${meta.id}"}
+    container 'nakor/coconet-paper-python'
+    conda (params.conda ? 'scikit-learn pandas' : null)
+
+    input:
+    tuple val(meta), path(bins)
     path truth
 
     output:
-    tuple val(ds), path("*.csv")
+    path "clustering_scores.csv"
 
     script:
-    truth_args = truth.isFile() ? "" : "--truth ${truth}"
+    truth_args = truth.isFile() ? "--truth ${truth}" : ""
     """
-    compute_metrics.py $truth_args \\
+    compute_clustering_metrics.py $truth_args \\
         --bins ${bins.join(' ')} \\
-        --output scores-${ds}.csv
+        --output clustering_scores.csv \\
+        --name $meta.id
     """
 }

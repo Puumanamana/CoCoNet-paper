@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import h5py
 
 
 def parse_args():
@@ -11,20 +14,17 @@ def parse_args():
     '''
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('metadata', type=str)
+    parser.add_argument('--metadata', type=str)
+    parser.add_argument('--h5', type=str)
+    parser.add_argument('--csv', action='store_true')
     args = parser.parse_args()
 
     return args
 
-def main():
-    '''
-    '''
+def summarize_metadata(path):
+    meta = pd.read_csv(path)
 
-    args = parse_args()
-
-    meta = pd.read_csv(args.metadata)
-
-    name = Path(args.metadata).parent.name
+    name = Path(path).parent.name
     n_viruses = len(meta.V_id.unique())
     n_ctg = len(meta)
     n_ctg_gt2k = sum(meta['size'] >= 2048)
@@ -39,5 +39,46 @@ def main():
 
     print('\n'.join(f'{n:>25}: {v}' for (n, v) in info))
 
+def summarize_abundance(path, csv=False):
+    with h5py.File(path, 'r') as handle:
+        n_contigs = len(handle)
+        n_samples = next(iter(handle.values())).shape[0]
+        
+        coverage = np.zeros((n_contigs, n_samples))
+        ctg_sizes = np.zeros(n_contigs)
+
+        for i, cov in enumerate(handle.values()):
+            coverage[i] = cov[:].sum(axis=1)
+            ctg_sizes[i] = cov.shape[1]
+
+    xcoverage = coverage.sum(axis=0) / ctg_sizes[:, None].sum()
+    gt2kb = ctg_sizes >= 2048
+    xcov_per_ctg_gt2kb = (coverage[gt2kb, :] / ctg_sizes[gt2kb, None]).mean(axis=0)
+
+    sim = re.split('[_\-]', Path(path).parent.name)
+
+    if csv:
+        entry = [sim[1], sim[3], sim[5], sim[6], n_contigs, sum(gt2kb),
+                 xcoverage.mean(), xcov_per_ctg_gt2kb.mean()]
+        print(','.join(map(str, entry)))
+    else:
+        print(f'======= Simulation: {n_samples} samples ({sim[5]}) ======='), 
+        print(f'Mean overall coverage: {xcoverage.mean().round(4)}')
+        print(f'Mean contig coverage (> 2kb): {xcov_per_ctg_gt2kb.mean().round(4)}')
+        print(f'#contigs: (>0) {n_contigs:,} (>2048) {sum(gt2kb):,}')
+            
+def main():
+    '''
+    '''
+
+    args = parse_args()
+
+    if args.metadata is not None:
+        summarize_metadata(args.metadata)
+    if args.h5 is not None:
+        summarize_abundance(args.h5, csv=args.csv)
+
+    
+        
 if __name__ == '__main__':
     main()

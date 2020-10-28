@@ -36,10 +36,11 @@ def main():
             continue
 
         coverage = pd.read_csv(
-            filename, sep='\t', header=None,
-            usecols=range(1, args.n_samples+2), dtype=int
-        ).set_index(1)
-        coverage.columns = [f'sample_{i+1}' for i in range(args.n_samples)]
+            filename, sep='\t', header=None, dtype=int,
+            usecols=range(1, args.n_samples+2),
+            names=['pos']+[f'sample-{i+1}' for i in range(args.n_samples)],
+        ).set_index('pos')
+
         coverage = (coverage
                     .reindex(index=range(1, 1+sizes.loc[virus]))
                     .fillna(0)

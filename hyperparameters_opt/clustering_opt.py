@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 
-from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import adjusted_rand_score, homogeneity_score, completeness_score
 import pandas as pd
+import numpy as np
 
 import sherpa
 
@@ -24,7 +25,7 @@ def coconet_init(args):
 
     return cfg
 
-def compute_score(bins_file):
+def compute_scores(bins_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
     assignments['truth'] = pd.factorize(assignments.contig.str.rpartition('|')[0])[0]
 
@@ -34,7 +35,7 @@ def compute_score(bins_file):
         completeness=completeness_score(assignments.truth, assignments.pred)
     )
 
-def compute_SA_score(bins_file, truth_file):
+def compute_SA_scores(bins_file, truth_file):
     assignments = pd.read_csv(bins_file, header=None, names=['contig', 'pred'])
     reference = pd.read_csv(truth_file, header=None, names=['contig', 'truth'])
     reference['truth'] = pd.factorize(reference.truth)[0]
@@ -52,7 +53,7 @@ def main():
     '''
 
     args = parser.parse_args()
-    
+
     os.environ['COCONET_CONTINUE'] = 'Y'
     config = coconet_init(args)
     os.environ['COCONET_CONTINUE'] = 'N'
@@ -61,26 +62,36 @@ def main():
     sherpa_outdir.mkdir(exist_ok=True)
 
     parameters = [
-        sherpa.Continuous('theta', [0.01, 0.99]),
-        sherpa.Continuous('gamma1', [0.05, 1]),        
-        sherpa.Continuous('gamma2', [0.05, 1]), # gamma2 = gamma1 + delta_g
-        sherpa.Discrete('max_neighbors', [1, 500])
+        sherpa.Ordinal('theta', list(np.arange(0.1, 1, 0.1))),
+        sherpa.Ordinal('gamma1', list(np.arange(0.1, 1, 0.1))),
+        sherpa.Ordinal('gamma2', list(np.arange(0.1, 1, 0.1))),
+        sherpa.Ordinal('max_neighbors', list(50 + np.arange(0, 500, 50))),
     ]
+    # parameters = [
+    #     sherpa.Continuous('theta', [0.1, 0.9]),
+    #     sherpa.Continuous('gamma1', [0.05, 0.9]),
+    #     sherpa.Continuous('gamma2', [0.05, 0.9]),
+    #     sherpa.Ordinal('max_neighbors', list(50 + np.arange(0, 500, 50))),
+    # ]
     if args.vote_threshold is not None:
         parameters.append(sherpa.Continuous('vote_threshold', [0.01, 0.99]))
     
-    algorithm = sherpa.algorithms.GPyOpt(max_concurrent=3)
+    algorithm = sherpa.algorithms.RandomSearch()
 
     study = sherpa.Study(parameters=parameters,
                          algorithm=algorithm,
                          lower_is_better=False)
 
+    params = ['gamma1', 'gamma2', 'theta', 'max_neighbors'] + ['vote_threshold']*(args.vote_threshold is not None)
+    
     for i, trial in enumerate(study):
+        if trial.parameters['gamma1'] >= trial.parameters['gamma2']:
+            continue
+
         # Update hyperparameters
         print(f"\nIteration #{i}")
 
-        for param in (['gamma1', 'gamma2', 'theta', 'max_neighbors'] +
-                      ['vote_threshold']*(args.vote_threshold is not None)):
+        for param in params:
             setattr(config, param, trial.parameters[param])
             print(f'{param}={getattr(config, param):.1g}')
 
@@ -96,12 +107,13 @@ def main():
             validation_scores = compute_scores(config.io['assignments'])
 
         print(', '.join(f'{m}={v:.3g}' for (m, v) in validation_scores.items()))
+
         # Add to study
         study.add_observation(trial=trial, objective=validation_scores.pop('ARI'),
                               context=validation_scores)
         study.finalize(trial)
         study.save(f'{str(sherpa_outdir)}')
-
+        
         
 if __name__ == '__main__':
     main()
