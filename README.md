@@ -9,6 +9,11 @@ The rest of the dependencies are already available on [DockerHub](https://hub.do
 
 For each figure, you will need to change to the corresponding directory before running the commands. For example, to reproduce the simulations, you need to do `cd camisim-simulation` first.
 
+Finally, a dedicated container is available to run the python script:
+```bash
+# docker run -v $PWD:/workspace -it nakor/coconet-paper-python-all python /workspace/path/to/script.py INPUTS ...
+```
+
 ## Run the simulations
 
 Folder: *camisim-simulation*
@@ -54,6 +59,7 @@ nextflow run nf-station-aloha --run-assembly --outdir station-ALOHA -profile sin
 For the fragment length distribution in the supplementary, you can run the following command:
 
 ```bash
+# This command requires samtools installed as well as numpy, pandas, matplotlib and seaborn installed
 make tlen
 ```
 
@@ -112,6 +118,7 @@ nextflow run nf-binning -profile singularity \
          --with_checkv \
          --fasta data/station-ALOHA/*.fasta \
          --coverage "data/station-ALOHA/*.bam" \
+         --truth data/station-ALOHA/truth.csv \
          --custom_preproc "--tlen-range 200 500" \
          --outdir binning-on-SA
 ```
@@ -120,6 +127,11 @@ Figure 7A and 7B:
 ```bash
 python scripts/plot_clustering.py --results binning-on-SA/assessment/clustering_scores.csv
 python scripts/plot_checkv binning-on-SA/assessment/checkV
+```
+
+Supplementary (effect of contig length on binning accuracy)
+```bash
+python scripts/plot_effect_of_contig_length.py --root-dir binning_on_sim
 ```
 
 ## Supplementary (neighbors in latent space are in the same bin)
@@ -136,14 +148,12 @@ Folder: *coverage-variability-effect*
 
 ```bash
 bash runner.sh /path/to/simulations/root/folder
-python plot.py
+make plot
 ```
 
-## Supplementary (effect of contig length on binning accuracy)
+## Supplementary (hyperparameters optimization)
 
-Folder: *?*
-
+Folder: *hyperparameters*
 ```bash
-
+make sim INPUT=/path/to/camisim/simulation/folder
 ```
-

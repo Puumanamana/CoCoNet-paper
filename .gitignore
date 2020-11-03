@@ -6,4 +6,8 @@ test-*
 output*
 *.pdf
 *.png
+*.html
 binning-on*
+figures
+*.csv
+*.fasta

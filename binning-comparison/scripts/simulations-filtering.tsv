@@ -1,0 +1,9 @@
+Dataset	Number of genomes	Coverage	Number of samples	raw	L>2048bp	prevalence>1
+Sim-1	500	3X	4	23,258	678	544
+Sim-2	500	3X	15	4,375	894	892
+Sim-3	500	10X	4	17,303	838	751
+Sim-4	500	10X	15	941	582	582
+Sim-5	2000	3X	4	92,516	2,555	1,992
+Sim-6	2000	3X	15	20,756	3,872	3,865
+Sim-7	2000	10X	4	68,699	3,210	2,883
+Sim-8	2000	10X	15	5,192	2,521	2,520

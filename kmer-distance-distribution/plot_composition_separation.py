@@ -13,12 +13,27 @@ import matplotlib.pyplot as plt
 from coconet.fragmentation import make_pairs
 from coconet.core.generators import CompositionGenerator
 
+
+sns.set(**{'context': 'paper', 'style': 'darkgrid'})
+FS = 10
+
+RC = {'axes.labelsize': FS+2,
+      'legend.fontsize': FS,
+      'axes.titlesize': FS+2,
+      'xtick.labelsize': FS-2, 'ytick.labelsize': FS-2}
+
+plt.rcParams.update(**RC)
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--db', type=str, default='/home/cedric/db/viral.genomic.ACGT.fasta')
+    parser.add_argument('--db', type=str, default=None)
     parser.add_argument('--fragment-lengths', type=int, nargs='+', default=[256, 512, 1024, 2048])
     parser.add_argument('--k', type=int, default=4)
     args = parser.parse_args()
+
+    if args.db is None or not Path(args.db).is_file():
+        print('Could not find database. Did you download it first?')
+        raise FileNotFoundError
 
     args.db = Path(args.db)
 
@@ -50,7 +65,6 @@ def run(fl, k, db, db_path):
 
 def plot(distances):
 
-    # sns.boxplot(x="fl", y="dist", hue="truth", data=distances, showfliers=False, hue_order=['Across species', 'Within species'])
     sns.violinplot(x="fl", y="dist", hue="truth", data=distances,
                    hue_order=['Across species', 'Within species'],
                    split=True, inner=None, gridsize=500)
@@ -58,10 +72,10 @@ def plot(distances):
 
     # plt.ylim([0, 0.2])
     plt.xlabel('Fragment length (bp)', fontsize=14)
-    plt.ylabel('Distance', fontsize=14)
+    plt.ylabel('Cosine distance', fontsize=14)
     plt.legend(title='')
 
-    plt.savefig('Figure-1_Composition-separation-with-fl.pdf', transparent=True)
+    plt.savefig('Figure-1_Composition-separation-with-fl.pdf')
     plt.show()
 
 

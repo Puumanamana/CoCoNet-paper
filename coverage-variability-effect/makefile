@@ -3,16 +3,19 @@ SUFFIX = $(notdir $(FOLDER))
 
 sim:
 	echo "======== Processing $(FOLDER) ========" && \
-	python main.py run \
+	python main.py run --threads 50 \
 	    --fasta $(FOLDER)/assembly.fasta \
 	    --h5 $(FOLDER)/coverage_contigs.h5 \
 	    --output results/output-$(SUFFIX) \
-	    --features coverage
+		--features coverage \
 
 SA:
 	echo "======== Processing $(FOLDER) ========" && \
-	python main.py run \
+	python main.py run --threads 30 \
 	    --fasta $(FOLDER)/*.fasta \
-	    --bam $(FOLDER)/*.bam \
+	    --bam $(FOLDER)/coverage/*.bam \
 	    --output results/output-$(SUFFIX) \
-	    --features coverage
+		--feature coverage
+
+plot:
+	python plot.py results/scores.csv

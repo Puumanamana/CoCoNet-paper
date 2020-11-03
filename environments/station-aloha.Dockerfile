@@ -17,3 +17,5 @@ RUN git clone https://bitbucket.org/MAVERICLab/stampede-clustergenomes.git \
 WORKDIR /workspace
 
 ENV PATH /opt/conda/envs/nf-station-aloha/bin:/opt/stampede-clustergenomes/bin:$PATH
+
+RUN vdb-config

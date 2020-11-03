@@ -67,12 +67,7 @@ def main():
         sherpa.Ordinal('gamma2', list(np.arange(0.1, 1, 0.1))),
         sherpa.Ordinal('max_neighbors', list(50 + np.arange(0, 500, 50))),
     ]
-    # parameters = [
-    #     sherpa.Continuous('theta', [0.1, 0.9]),
-    #     sherpa.Continuous('gamma1', [0.05, 0.9]),
-    #     sherpa.Continuous('gamma2', [0.05, 0.9]),
-    #     sherpa.Ordinal('max_neighbors', list(50 + np.arange(0, 500, 50))),
-    # ]
+
     if args.vote_threshold is not None:
         parameters.append(sherpa.Continuous('vote_threshold', [0.01, 0.99]))
     
@@ -113,7 +108,6 @@ def main():
                               context=validation_scores)
         study.finalize(trial)
         study.save(f'{str(sherpa_outdir)}')
-        
-        
+    
 if __name__ == '__main__':
     main()

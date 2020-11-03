@@ -1,8 +1,9 @@
 from pathlib import Path
+import re
 import logging
+from collections import deque
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.optim as optim
 from sklearn.metrics import (
@@ -14,15 +15,14 @@ from sklearn.metrics import (
 )
 from coconet import coconet, parser
 from coconet.core.config import Configuration
-from coconet.core.generators import CoverageGenerator
+from coconet.core.generators import CoverageGenerator, CompositionGenerator
 from coconet import dl_util
-from coconet.log import setup_logger
 
 TEST_FREQ = 100
+METRICS = ['accuracy', 'AUC', 'TP', 'TN', 'FP', 'FN']
 
 
 def coconet_init(args):
-    setup_logger('CoCoNet', Path(args.output, 'CoCoNet.log'), args.loglvl)
     cfg = Configuration()
     cfg.init_config(**vars(args))
     cfg.to_yaml()
@@ -39,63 +39,147 @@ def main():
     args = parser.parse_args()
 
     cfg = coconet_init(args)
-    logger = logging.getLogger('learning')
-    
-    (x_test, x_train) = (get_generator(cfg, mode) for mode in ['test', 'train'])
-    (y_test, y_train) = (get_truth(cfg.io['pairs'][mode]) for mode in ['test', 'train'])
 
-    x_test = dict(with_var=next(x_test))
-    x_test['no_var'] = [torch.ones_like(xi) * xi.mean(axis=2).unsqueeze(-1)
-                        for xi in x_test['with_var']]
-    y_test = y_test.numpy().astype(int)
-    
-    scores = []
-    models = dict()
-    optimizers = dict()
+    # load data
+    (x_test_compo, x_train_compo) = (get_composition_generator(cfg, s)
+                                     for s in ['test', 'train'])
+    (x_test_cover, x_train_cover) = (get_coverage_generator(cfg, s)
+                                     for s in ['test', 'train'])
+    (y_test, y_train) = (get_truth(cfg.io['pairs'][s]) for s in ['test', 'train'])
 
+    if len(cfg.features) > 1:
+        x_train = zip(x_train_compo, x_train_cover)
+        x_test = dict(with_var=next(zip(x_test_compo, x_test_cover)))
+    else:
+        x_train = x_train_cover
+        x_test = dict(with_var=next(x_test_cover))
+
+    x_test['no_var'] = flatten_coverage(x_test['with_var'])
+    y_test_npy = y_test.numpy().astype(int)
+
+    # Initialize models
     n_batch = 1 + dl_util.get_npy_lines(cfg.io['pairs']['train']) // cfg.batch_size
+    nets = dict(no_var=dict(), with_var=dict())
 
-    for coverage_mode in x_test:
-        models[coverage_mode] = dl_util.initialize_model(
-            'coverage', cfg.get_input_shapes(), cfg.get_architecture()
+    for mode in ['no_var', 'with_var']:
+        nets[mode]['model'] = dl_util.initialize_model(
+            '-'.join(cfg.features), cfg.get_input_shapes(), cfg.get_architecture()
         ).train()
-        optimizers[coverage_mode] = optim.Adam(models[coverage_mode].parameters(),
-                                               lr=cfg.learning_rate)
+        nets[mode]['optim'] = optim.Adam(nets[mode]['model'].parameters(), lr=cfg.learning_rate)
+        nets[mode]['loss'] = deque(maxlen=args.patience)
+        nets[mode]['over'] = False
+
+    logger = logging.getLogger('<learning>')
+    logger.info('Training started')
 
     for i, batch_x in enumerate(x_train, 1):
-        for coverage_mode in x_test:
-            optimizers[coverage_mode].zero_grad()
+
+        if all(nets[mode]['over'] for mode in nets):
+            break
+
+        for mode in nets:
+            if nets[mode]['over']:
+                continue
+
+            nets[mode]['optim'].zero_grad()
 
             truth_b = y_train[(i-1)*cfg.batch_size:i*cfg.batch_size]
 
-            if coverage_mode == 'with_var':
-                pred_b = models[coverage_mode](*batch_x)
+            if mode == 'with_var':
+                pred_b = nets['with_var']['model'](*batch_x)
             else:
-                template = torch.ones_like(batch_x[0])
-                batch_x_mean = [template*xi.mean(axis=2).unsqueeze(-1) for xi in batch_x]
-                pred_b = models[coverage_mode](*batch_x_mean)
+                batch_x_flat = flatten_coverage(batch_x)
+                pred_b = nets['no_var']['model'](*batch_x_flat)
 
-            loss = models[coverage_mode].compute_loss(pred_b, truth_b)
+            loss = nets[mode]['model'].compute_loss(pred_b, truth_b)
             loss.backward()
-            
-            optimizers[coverage_mode].step()
+
+            nets[mode]['optim'].step()
+
+        if not (
+                (i % TEST_FREQ == 0) or (i == n_batch)
+        ):
+            continue
 
         # Get test results
-        if (i % TEST_FREQ == 0 and i > 0):
-            for coverage_mode in models:
-                pred = dl_util.run_test(models[coverage_mode], x_test[coverage_mode])
-                metrics = get_scores(y_test, pred['coverage'])
-                metrics.update(mode=coverage_mode, batch=i)
-                scores.append(metrics)
+        for mode in nets:
+            if nets[mode]['over']:
+                continue
 
-                logger.info((
-                    f'(Batch #{i:,} / {n_batch:,}, {coverage_mode}) '
-                    f'accuracy={metrics["accuracy"]:.2%}, AUC={metrics["AUC"]:.2%}'
-                ))
+            (pred, test_loss) = make_prediction(
+                nets[mode]['model'], x_test[mode], y_test, args.features
+            )
 
-    scores = pd.DataFrame(scores)
-    scores.to_csv(f'results/test-{cfg.io["fasta"].parent.stem}.csv', index=False)
+            losses = nets[mode]['loss']
+            losses.append(test_loss)
 
+            scores = get_scores(y_test_npy, pred)
+            scores.update(mode=mode, batch=i)
+
+            logger.info((
+                f'(Batch #{i:,} / {n_batch:,}, {mode}) '
+                f'accuracy={scores["accuracy"]:.2%}, AUC={scores["AUC"]:.2%}'
+            ))
+
+            if test_loss <= np.min(losses):
+                nets[mode]['best_so_far'] = [i] + [scores[k] for k in METRICS]
+
+            if (len(losses) == args.patience
+                and losses[0] <= np.min(losses)):
+                nets[mode]['over'] = True
+                logger.info(f'{mode}: early stopping (best={nets[mode]["best_so_far"]}')
+
+    save_best_scores(args.fasta, [(mode, nets[mode]['best_so_far']) for mode in nets],
+                     folder=args.output.parent)
+
+def save_best_scores(fasta, results, folder):
+    if 'aloha' in str(fasta).lower():
+        print(results)
+        return
+
+    output = Path(f'{folder}/scores.csv')
+    if not output.is_file():
+        header = ['genomes', 'samples', 'coverage', 'replicate',
+                  'mode', 'last_batch'] + METRICS
+        with open(output, 'w') as handle:
+            handle.write(','.join(header) + '\n')
+
+    with open(output, 'a') as handle:
+        info = re.split(r'[_\-]', Path(fasta).parent.name)
+
+        for (mode, scores) in results:
+            data = [info[i] for i in [1, 3, 5, 6]] + [mode] + scores
+            handle.write(','.join(map(str, data)) + '\n')
+
+def flatten_coverage(inputs):
+    if len(inputs[0]) == 2:
+        # combined model
+        (compo, cover) = inputs
+    else:
+        cover = inputs
+
+    template = torch.ones_like(cover[0])
+    flat_cov = [template*xi.mean(axis=2).unsqueeze(-1) for xi in cover]
+
+    if len(inputs[0]) == 2:
+        return [compo, flat_cov]
+
+    return flat_cov
+            
+def make_prediction(model, x, y, ft='coverage'):
+
+    if len(ft) == 1:
+        ft = ft[0]
+    else:
+        ft = 'combined'
+
+    model.eval()
+    pred = model(*x)[ft]
+    loss = model.loss_op(pred, y).mean().item()
+    model.train()
+
+    return (pred.detach().numpy(), loss)
+    
 def get_truth(pairs_file):
     ctg_names = np.load(pairs_file)['sp']
 
@@ -110,13 +194,26 @@ def get_truth(pairs_file):
 
     return torch.from_numpy(truth.astype(np.float32)[:, None])
 
-def get_generator(cfg, mode):
+def get_composition_generator(cfg, mode):
     pairs = cfg.io['pairs'][mode]
 
     batch_size = cfg.batch_size
     if mode == 'test':
         batch_size = np.load(pairs).shape[0]
-        
+
+    return CompositionGenerator(
+        pairs, cfg.io['filt_fasta'],
+        batch_size=batch_size,
+        kmer=cfg.kmer, rc=True, norm=False
+    )
+
+def get_coverage_generator(cfg, mode):
+    pairs = cfg.io['pairs'][mode]
+
+    batch_size = cfg.batch_size
+    if mode == 'test':
+        batch_size = np.load(pairs).shape[0]
+
     return CoverageGenerator(
         pairs,
         cfg.io['h5'],

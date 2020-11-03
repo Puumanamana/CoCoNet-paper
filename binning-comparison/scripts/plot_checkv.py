@@ -4,13 +4,12 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 
 sns.set(**{'context': 'paper', 'style': 'darkgrid'})
-FS = 10
+FS = 18
 
 RC = {'axes.labelsize': FS+2,
       'legend.fontsize': FS,
@@ -72,28 +71,27 @@ def main():
 
     plot_data.method = pd.Categorical(plot_data.method.replace('metabat2', 'Metabat2'),
                                       ['CONCOCT', 'Metabat2', 'CoCoNet'])
-    
-    grid = sns.catplot(data=plot_data, kind='bar', x='method', y='count',
+    grid = sns.catplot(data=plot_data, kind='bar', x='method', y='count', edgecolor='black',
                        col='checkv_quality', sharey=False, col_wrap=3)
     grid.set_titles(col_template='#{col_name} bins')
     grid.set(xlabel='', ylabel='Count')
 
     for ax in [1, 2, 4]:
         grid.facet_axis(0, ax).set_ylabel('')
-        
+
     last_ax = grid.facet_axis(0, 5)
 
     bin_sizes = assembly_quality['summary'].bin_size.reset_index()
     bin_sizes.method = pd.Categorical(bin_sizes.method.replace('metabat2', 'Metabat2'),
                                       ['CONCOCT', 'Metabat2', 'CoCoNet'])
-    
+
     sns.boxplot(data=bin_sizes, x='method', y='bin_size', ax=last_ax, showfliers=False)
     last_ax.set_yscale('log')
     last_ax.set_title('Distribution of bin sizes')
     last_ax.set_xlabel('')    
     last_ax.set_ylabel('Size (bp)')
-    
-    plt.savefig('figure-7B.pdf', bbox_inches='tight')
+
+    plt.savefig('figures/figure-7B-checkv-SA.eps', bbox_inches='tight')
 
 if __name__ == '__main__':
     main()

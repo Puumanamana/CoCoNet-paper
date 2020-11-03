@@ -4,14 +4,13 @@ import re
 import argparse
 
 import pandas as pd
-import numpy as np
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 
 sns.set(**{'context': 'paper', 'style': 'darkgrid'})
-FS = 10
+FS = 12
 
 RC = {'axes.labelsize': FS+2,
       'legend.fontsize': FS,
@@ -39,7 +38,7 @@ def load(filename):
         data[name] = sim_info.str[pos]
         data[name] = pd.Categorical(
             data[name],
-            sorted(data[name].unique(), key=lambda x: int(re.findall('\d+', x)[0]))
+            sorted(data[name].unique(), key=lambda x: int(re.findall(r'\d+', x)[0]))
         )
 
     main_metrics = ['accuracy', 'F1', 'AUC']
@@ -50,7 +49,7 @@ def load(filename):
         main=data.drop(columns=other_metrics).melt(id_vars=meta),
         suppl=data.drop(columns=main_metrics).melt(id_vars=meta)
     )
-    
+
     return data
 
 def plot(data, output=None, ymax=None):
@@ -59,7 +58,7 @@ def plot(data, output=None, ymax=None):
                     row='variable', col='nb_genomes',
                     **CATPLOT_KW)
     (g.add_legend().despine(left=True)
-     .set_titles(col_template='#bins: {col_name}', row_template='')
+     .set_titles(col_template='{col_name} genomes', row_template='')
      .set_ylabels(''))
 
     rownames = data.variable.unique()
@@ -80,15 +79,14 @@ def plot(data, output=None, ymax=None):
         plt.savefig(output, bbox_inches='tight')
     else:
         plt.show()
-    
 
 def main():
 
     args = parse_args()
 
     data = load(args.results)
-    plot(data['main'], output=f'figure-5.pdf', ymax=1)
-    plot(data['suppl'], output=f'supplementary-nn-metrics.pdf')
+    plot(data['main'], output='figures/figure-5_NN-metrics.eps', ymax=1)
+    plot(data['suppl'], output='figures/supplementary-nn-metrics.pdf')
 
 if __name__ == '__main__':
     main()
