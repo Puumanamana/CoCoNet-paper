@@ -197,27 +197,19 @@ def get_truth(pairs_file):
 def get_composition_generator(cfg, mode):
     pairs = cfg.io['pairs'][mode]
 
-    batch_size = cfg.batch_size
-    if mode == 'test':
-        batch_size = np.load(pairs).shape[0]
-
     return CompositionGenerator(
         pairs, cfg.io['filt_fasta'],
-        batch_size=batch_size,
+        batch_size=cfg.batch_size * (mode=='train'),
         kmer=cfg.kmer, rc=True, norm=False
     )
 
 def get_coverage_generator(cfg, mode):
     pairs = cfg.io['pairs'][mode]
 
-    batch_size = cfg.batch_size
-    if mode == 'test':
-        batch_size = np.load(pairs).shape[0]
-
     return CoverageGenerator(
         pairs,
         cfg.io['h5'],
-        batch_size=batch_size,
+        batch_size=cfg.batch_size * (mode=='train'),
         load_batch=cfg.load_batch,
         wsize=cfg.wsize, wstep=cfg.wstep
     )

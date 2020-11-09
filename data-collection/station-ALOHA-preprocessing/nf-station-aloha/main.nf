@@ -39,7 +39,7 @@ workflow {
     // Generate assembly from illumina reads
 
     if (params.run_assembly) {
-        accessions = Channel.from(["SRR5677468", "SRR8811962", "SRR8811963"])
+        accessions = Channel.from(["SRR10378148", "SRR8811962", "SRR8811963"])
         illumina_assembly = illumina(accessions).assembly
     } else {
         illumina_assembly = file(params.assembly, checkIfExists: true)

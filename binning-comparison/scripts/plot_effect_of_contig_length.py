@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import re
@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 from Bio import SeqIO
 import sklearn.metrics
+import pingouin as pg
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     files_info = find_files(args.root_dir)
-    intervals = [2000, 3000, 5000, 10000, 100000]
+    intervals = [2000, 3000, 10000, 100000]
 
     scores = []
     for _, entry in files_info.iterrows():
@@ -77,7 +78,11 @@ if __name__ == '__main__':
     scores.columns.name = 'interval'
     scores = scores.stack().loc['adjusted_rand_score'].rename('ARI').reset_index()
 
-    sns.catplot(data=scores, x='interval', y='ARI', kind='box', showfliers=False)
+    print('====== Kruskal-Wallis test ======')
+    print(pg.kruskal(data=scores, dv='ARI', between='interval'))
 
-    plt.savefig(f'figures/supplementary-effect-of-contig-length.eps', bbox_inches='tight')
+    g = sns.catplot(data=scores, x='interval', y='ARI', kind='box', showfliers=False)
+    g.set(xlabel='Contig length category')
+
+    plt.savefig('figures/supplementary-effect-of-contig-length.pdf', bbox_inches='tight')
 

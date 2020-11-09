@@ -1,10 +1,9 @@
 FOLDER ?= results/station-ALOHA
 
-# BAM := $(foreach dir,$(FOLDER),$(wildcard $(dir)/coverage/*.bam))
-BAM := $(wildcard results/station-ALOHA/coverage/*.bam)
+BAM := $(wildcard results/station-ALOHA/illumina-coverage/*.bam)
 
 dataset:
-	nextflow run nf-station-aloha -with-singularity --run-assembly --outdir $(FOLDER)
+	nextflow run nf-station-aloha -with-singularity --run_assembly --outdir $(FOLDER)
 
 tlen: $(BAM)
 $(BAM):

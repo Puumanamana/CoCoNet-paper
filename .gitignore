@@ -10,4 +10,7 @@ output*
 binning-on*
 figures
 *.csv
+*.tsv
 *.fasta
+backup
+binning-perf*

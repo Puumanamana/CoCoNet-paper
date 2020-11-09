@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import re
 import sys
 
@@ -6,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 sns.set(**{'context': 'paper', 'style': 'darkgrid'})
-FS = 12
+FS = 16
 
 RC = {'axes.labelsize': FS+2,
       'legend.fontsize': FS,
@@ -35,7 +37,8 @@ grid = sns.catplot(
     col='coverage', row='samples', sharey=False, margin_titles=True,
 )
 
-grid.set_titles(row_template='{row_name} samples')
+grid.set(xlabel='')
+grid.set_titles(row_template='{row_name} samples', col_template='Coverage={col_name}')
 grid.savefig('performance-with-coverage-variability.pdf')
 
 plt.show()

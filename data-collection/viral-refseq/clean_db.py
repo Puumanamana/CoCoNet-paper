@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from random import choice
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser

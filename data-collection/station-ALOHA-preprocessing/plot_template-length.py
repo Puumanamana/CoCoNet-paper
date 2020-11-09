@@ -23,7 +23,7 @@ plt.rcParams.update(**RC)
 def get_freqs(bins=20):
     data = {}
     for filename in Path('results').glob('tlen-*.csv'):
-        name = filename.stem.split('-')[-1].replace('015', '15')
+        name = filename.stem.split('-')[-1]
 
         max_tlen = int(get_last_line(filename).split(',')[-1])
 
@@ -48,7 +48,6 @@ def get_freqs(bins=20):
 
 def plot_tlen(counts, fmt='png', **kwargs):
     grid = sns.FacetGrid(data=counts, col='sample', col_wrap=2,
-                         col_order=['15m', '117m', '250m'],
                          sharex=False, sharey=False, aspect=2,
                          **kwargs)
     grid.map(sns.barplot, 'tlen', 'freq', order=counts.tlen.drop_duplicates())
@@ -66,7 +65,6 @@ def get_last_line(f):
         last_line = f.readline().decode()
 
     return last_line
-
 
 if __name__ == '__main__':
     counts = get_freqs()

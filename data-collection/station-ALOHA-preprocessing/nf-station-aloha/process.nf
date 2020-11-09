@@ -90,7 +90,7 @@ process COASSEMBLY_METASPADES {
     cat *_2.fastq.gz > all_2.fastq.gz
     cat *_unpaired.fastq.gz > all_unpaired.fastq.gz
 
-    spades.py --meta -1 all_1.fastq.gz -2 all_2.fastq.gz -s all_unpaired.fastq.gz -o output
+    spades.py --meta -t $task.cpus -1 all_1.fastq.gz -2 all_2.fastq.gz -s all_unpaired.fastq.gz -o output
 
     rm -f all_*.fastq.gz
     """

@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import euclidean_distances
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 from coconet import coconet, parser
@@ -12,6 +13,7 @@ from coconet.log import setup_logger
 
 
 sns.set(style='ticks', font_scale=0.7)
+FS = 10
 
 def coconet_init(args):
     setup_logger('<CoCoNet>', Path(args.output, 'CoCoNet.log'), args.loglvl)
@@ -26,10 +28,8 @@ def coconet_init(args):
 
     return cfg
 
-def compute_distances(feature):
-    handle = feature.get_handle('latent')
-    data = np.stack([np.array(handle.get(ctg)[:]) for ctg in handle.keys()])
-
+def compute_distances(feature, contigs):
+    data = np.stack([data for name, data in feature.get_h5_data().items() if name in contigs])
     contig_centers = np.mean(data, axis=1)
     pairwise_distances = euclidean_distances(contig_centers)
 
@@ -47,10 +47,10 @@ def plot_distance_vs_prob(distances, truth):
     g = sns.pairplot(data, hue='truth', diag_kind='hist',
                      plot_kws=dict(s=5, linewidth=0, alpha=0.8))
     g.set(xscale='log', yscale='log')
+
     g._legend.set_title('')
-    
+
     g.savefig('latent_space.png', dpi=300)
-    plt.show()
 
 def main():
 
@@ -60,11 +60,11 @@ def main():
 
     features = cfg.get_features()
 
-    distances = {feature.name: compute_distances(feature) for feature in features}
-
-    contig_names = features[0].get_contigs()
+    contig_names = next(f for f in features if f.name=='composition').get_contigs()
     true_genomes = np.array([x.split('|')[0] for x in contig_names])
     n_ctg = len(contig_names)
+
+    distances = {feature.name: compute_distances(feature, contig_names) for feature in features}
 
     truth = np.tile(true_genomes, (n_ctg, 1)) == np.tile(true_genomes.reshape(-1, 1), (1, n_ctg))
     plot_distance_vs_prob(distances, truth)
